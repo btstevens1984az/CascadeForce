@@ -246,15 +246,19 @@ export class Game {
     this.hp = this.maxHp
     this.weapon = 'pulse'
     this.fireCd = 0
-    this.invuln = 1.2
+    this.invuln = 1.8
     this.camX = 0
     this.t = 0
-    this.spawnTimer = 0.6
+    // Warm-up before the first wave
+    this.spawnTimer = this.levelIndex === 0 ? 3.5 : this.levelIndex === 1 ? 2.2 : 1.4
     this.midSpawned = false
     this.bossSpawned = false
     this.clearActors()
     this.world.build(this.level, this.levelLen())
     this.playerMesh.visible = true
+    // More HP early; less on the final op
+    this.maxHp = this.levelIndex === 0 ? 120 : this.levelIndex === 1 ? 100 : 90
+    this.hp = this.maxHp
     this.syncHud()
   }
 
@@ -545,6 +549,19 @@ export class Game {
     this.muzzleLight.intensity = lerp(this.muzzleLight.intensity, 0, 1 - Math.pow(0.0001, dt))
   }
 
+  /** 0 = gentle start of op, 1 = end of op. Also rises across campaign. */
+  pressure() {
+    const within = clamp(this.camX / Math.max(1, this.levelLen() - 8), 0, 1)
+    const campaign = this.levelIndex / 2
+    return clamp(within * 0.7 + campaign * 0.45, 0, 1)
+  }
+
+  enemyBulletCount() {
+    let n = 0
+    for (const b of this.bullets) if (!b.fromPlayer) n++
+    return n
+  }
+
   updateSpawns(dt: number) {
     if (this.bossSpawned) return
     const prog = this.camX + 8
@@ -559,13 +576,33 @@ export class Game {
     }
     if (this.enemies.some((e) => (e.kind === 'midboss' || e.kind === 'boss') && !e.dead)) return
 
+    // Cap live fodder so the screen never floods
+    const maxLive = this.levelIndex === 0 ? 3 : this.levelIndex === 1 ? 5 : 7
+    if (this.enemies.filter((e) => !e.dead && e.kind !== 'midboss' && e.kind !== 'boss').length >= maxLive) {
+      return
+    }
+
     this.spawnTimer -= dt
     if (this.spawnTimer > 0) return
-    this.spawnTimer = this.level.enemyRate * rand(0.7, 1.15)
-    const kinds: Enemy['kind'][] = ['grunt', 'grunt', 'flyer', 'heavy']
-    const kind = kinds[Math.floor(Math.random() * kinds.length)]!
+    const p = this.pressure()
+    const rate = this.level.enemyRate * lerp(1.35, 0.75, p) * rand(0.85, 1.15)
+    this.spawnTimer = rate
+
+    // Early: mostly slow grunts. Later: mix in flyers/heavies.
+    let kind: Enemy['kind'] = 'grunt'
+    const roll = Math.random()
+    if (this.levelIndex === 0 && p < 0.35) {
+      kind = 'grunt'
+    } else if (roll < 0.55 - p * 0.15) {
+      kind = 'grunt'
+    } else if (roll < 0.82) {
+      kind = 'flyer'
+    } else {
+      kind = this.levelIndex === 0 && p < 0.5 ? 'grunt' : 'heavy'
+    }
+
     const x = this.camX + 16 + rand(0, 3)
-    if (kind === 'flyer') this.spawnEnemy(kind, x, 2.5 + rand(0, 2))
+    if (kind === 'flyer') this.spawnEnemy(kind, x, 1.5 + rand(0, 1.2))
     else this.spawnEnemy(kind, x, 0)
   }
 
@@ -593,7 +630,7 @@ export class Game {
       vx: b.vx!,
       kind,
       t: 0,
-      fireCd: rand(0.4, 1.2),
+      fireCd: rand(0.9, 1.8),
       facing: -1,
       mesh,
       ...overrides,
@@ -659,7 +696,8 @@ export class Game {
         if (e.mesh && e.kind === 'boss') e.mesh.rotation.y = e.t * 0.5
       }
 
-      if (e.fireCd <= 0 && e.x - this.camX < 18) this.enemyFire(e)
+      // Don't open fire the instant they spawn — give the player a beat
+      if (e.fireCd <= 0 && e.x - this.camX < 16 && e.t > 0.7) this.enemyFire(e)
 
       const hb = this.playerHitbox()
       if (this.invuln <= 0 && aabb(hb, { x: e.x - e.w / 2, y: e.y, w: e.w, h: e.h })) {
@@ -681,8 +719,17 @@ export class Game {
     const dy = chestY - (e.y + e.h * 0.45)
     const len = Math.hypot(dx, dy) || 1
     const d = this.level.difficulty
+    const p = this.pressure()
+
+    // Soft cap on enemy projectiles — early game stays readable
+    const bulletCap = this.levelIndex === 0 ? 6 : this.levelIndex === 1 ? 10 : 16
+    if (this.enemyBulletCount() >= bulletCap) {
+      e.fireCd = 0.4
+      return
+    }
 
     const shoot = (vx: number, vy: number, damage: number, radius: number, color: string, life = 2.5, by = 1.25) => {
+      if (this.enemyBulletCount() >= bulletCap) return
       const mesh = createBulletMesh(hexToInt(color))
       this.root.add(mesh)
       this.bullets.push({
@@ -692,47 +739,61 @@ export class Game {
     }
 
     if (e.kind === 'grunt') {
-      e.fireCd = 1.35 / d
-      // Flat chest-height — duck (hitbox top 0.72) and it sails over
-      shoot(-8.2, 0, 10, 0.16, '#ff6b6b', 2.5, 1.25)
+      // Slow, single chest shot — very duckable early
+      e.fireCd = lerp(2.6, 1.4, p) / Math.max(0.45, d)
+      shoot(-lerp(5.5, 8.5, p), 0, 8, 0.16, '#ff6b6b', 2.8, 1.25)
     } else if (e.kind === 'flyer') {
-      e.fireCd = 1.05 / d
-      shoot((dx / len) * 9, (dy / len) * 9, 8, 0.14, '#ff9f43', 2.2, e.y)
+      e.fireCd = lerp(2.4, 1.2, p) / Math.max(0.45, d)
+      const spd = lerp(5.5, 8.5, p)
+      shoot((dx / len) * spd, (dy / len) * spd, 7, 0.14, '#ff9f43', 2.4, e.y + 0.9)
     } else if (e.kind === 'heavy') {
-      e.fireCd = 1.7 / d
-      shoot(-6.8, 0.6, 14, 0.18, '#ff4757', 2.5, 1.55)
-      shoot(-6.8, 0, 14, 0.18, '#ff4757', 2.5, 1.2)
-      shoot(-6.8, -0.5, 14, 0.18, '#ff4757', 2.5, 0.55)
+      e.fireCd = lerp(2.8, 1.6, p) / Math.max(0.45, d)
+      // One shot early; add more lines as pressure rises
+      shoot(-lerp(5, 7, p), 0, 12, 0.18, '#ff4757', 2.6, 1.2)
+      if (p > 0.35 || this.levelIndex >= 1) {
+        shoot(-lerp(5, 7, p), 0.45, 10, 0.16, '#ff4757', 2.6, 1.5)
+      }
+      if (p > 0.7 && this.levelIndex >= 1) {
+        shoot(-lerp(5, 7, p), -0.4, 10, 0.16, '#ff4757', 2.6, 0.55)
+      }
     } else if (e.kind === 'midboss') {
       const phase = e.phase || 0
-      e.fireCd = (phase === 2 ? 0.35 : phase === 1 ? 0.55 : 0.8) / Math.sqrt(d)
-      const n = 3 + phase * 2
+      e.fireCd = (phase === 2 ? 0.7 : phase === 1 ? 1.0 : 1.35) / Math.sqrt(Math.max(0.5, d))
+      // Fan: 2 → 3 → 4 shots by phase (was 3–7)
+      const n = 2 + phase
       for (let i = 0; i < n; i++) {
-        const a = Math.atan2(dy, dx) + (i - (n - 1) / 2) * 0.18
-        shoot(Math.cos(a) * (7 + phase), Math.sin(a) * (7 + phase), 12, 0.18, this.level.accent, 3, e.y + 1.2)
+        const a = Math.atan2(dy, dx) + (i - (n - 1) / 2) * 0.2
+        const spd = 5.5 + phase * 0.8
+        shoot(Math.cos(a) * spd, Math.sin(a) * spd, 10, 0.18, this.level.accent, 3, e.y + 1.2)
       }
     } else if (e.kind === 'boss') {
       const phase = e.phase || 0
-      e.fireCd = (phase === 2 ? 0.22 : phase === 1 ? 0.38 : 0.55) / Math.sqrt(d)
-      const n = 8 + phase * 4
+      e.fireCd = (phase === 2 ? 0.55 : phase === 1 ? 0.85 : 1.2) / Math.sqrt(Math.max(0.5, d))
+      // Ring: much smaller than before (was 8–16)
+      const n = this.levelIndex === 0 ? 4 + phase : this.levelIndex === 1 ? 5 + phase : 6 + phase * 2
       for (let i = 0; i < n; i++) {
         const a = (Math.PI * 2 * i) / n + e.t
-        shoot(Math.cos(a) * (5 + phase * 1.2), Math.sin(a) * (5 + phase * 1.2), 14, 0.2, '#ff3d5a', 3.5, e.y + 1.6)
+        const spd = 4 + phase * 0.8
+        shoot(Math.cos(a) * spd, Math.sin(a) * spd, 12, 0.18, '#ff3d5a', 3.2, e.y + 1.6)
       }
-      if (phase >= 1) {
-        for (let i = -2; i <= 2; i++) {
-          const a = Math.atan2(chestY - (e.y + 1.6), dx) + i * 0.12
-          shoot(Math.cos(a) * 10, Math.sin(a) * 10, 16, 0.16, '#ffe66d', 2.8, e.y + 1.6)
+      // Aimed volley only mid/late phases on harder ops
+      if (phase >= 1 && this.levelIndex >= 1) {
+        const spread = this.levelIndex === 2 && phase === 2 ? 2 : 1
+        for (let i = -spread; i <= spread; i++) {
+          const a = Math.atan2(chestY - (e.y + 1.6), dx) + i * 0.14
+          shoot(Math.cos(a) * 8, Math.sin(a) * 8, 14, 0.16, '#ffe66d', 2.8, e.y + 1.6)
         }
       }
-      if (this.levelIndex === 2 && phase === 2 && Math.random() < 0.4) {
-        for (let i = 0; i < 5; i++) {
-          const bx = this.camX + rand(2, 14)
+      // Rain only on final boss last phase
+      if (this.levelIndex === 2 && phase === 2 && Math.random() < 0.25) {
+        for (let i = 0; i < 3; i++) {
+          const bx = this.camX + rand(3, 13)
+          if (this.enemyBulletCount() >= bulletCap) break
           const mesh = createBulletMesh(0xff9ff3)
           this.root.add(mesh)
           this.bullets.push({
-            x: bx, y: 10, vx: rand(-1, 1), vy: -rand(5, 8),
-            life: 4, damage: 18, radius: 0.22, fromPlayer: false, weapon: 'pulse', color: '#ff9ff3', mesh,
+            x: bx, y: 10, vx: rand(-0.6, 0.6), vy: -rand(4, 6.5),
+            life: 4, damage: 14, radius: 0.2, fromPlayer: false, weapon: 'pulse', color: '#ff9ff3', mesh,
           })
         }
       }
