@@ -8,4 +8,11 @@ document.getElementById('startBtn')?.addEventListener('click', () => game.onStar
 document.getElementById('storyBtn')?.addEventListener('click', () => game.onStoryClick())
 document.getElementById('overlayBtn')?.addEventListener('click', () => game.onOverlayClick())
 
+declare global {
+  interface Window {
+    cascadeForce?: Game
+  }
+}
+window.cascadeForce = game
+
 game.start()

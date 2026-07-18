@@ -277,6 +277,62 @@ export class Game {
     if (this.mode === 'title') this.startBrief(0)
   }
 
+  /**
+   * Deterministic action setups for README gameplay captures.
+   * Scenes: combat | spread | duck | aimup | midboss | inferno
+   */
+  prepareCapture(scene: string) {
+    const levelFor = scene === 'inferno' || scene === 'midboss' ? (scene === 'inferno' ? 1 : 0) : 0
+    this.levelIndex = levelFor
+    this.lives = 3
+    this.score = scene === 'combat' ? 1240 : scene === 'spread' ? 3480 : 2100
+    this.startLevel()
+    this.invuln = 99
+    this.hp = this.maxHp
+    this.px = 8
+    this.py = 0
+    this.camX = 5
+    this.spawnTimer = 99
+
+    if (scene === 'combat') {
+      this.weapon = 'pulse'
+      for (let i = 0; i < 5; i++) this.spawnEnemy('grunt', 12 + i * 2.2, 0)
+      this.spawnEnemy('flyer', 14, 3)
+      this.spawnEnemy('heavy', 18, 0)
+    } else if (scene === 'spread') {
+      this.weapon = 'hyperspread'
+      for (let i = 0; i < 8; i++) this.spawnEnemy(i % 2 ? 'flyer' : 'grunt', 11 + i * 1.6, i % 2 ? 2.8 : 0)
+    } else if (scene === 'duck') {
+      this.weapon = 'pulse'
+      for (let i = 0; i < 4; i++) {
+        const g = 11 + i * 2.5
+        this.spawnEnemy('grunt', g, 0)
+      }
+      // Force immediate chest-height fire
+      for (const e of this.enemies) e.fireCd = 0.05
+    } else if (scene === 'aimup') {
+      this.weapon = 'plasma'
+      for (let i = 0; i < 6; i++) this.spawnEnemy('flyer', 11 + i * 1.8, 2.4 + (i % 3) * 0.4)
+    } else if (scene === 'midboss') {
+      this.weapon = 'railstorm'
+      this.midSpawned = true
+      this.spawnMidBoss()
+      this.mode = 'play'
+      this.bannerTimer = 0
+    } else if (scene === 'inferno') {
+      this.levelIndex = 1
+      this.startLevel()
+      this.invuln = 99
+      this.px = 8
+      this.camX = 5
+      this.spawnTimer = 99
+      this.weapon = 'inferno'
+      for (let i = 0; i < 7; i++) this.spawnEnemy(i % 3 === 0 ? 'heavy' : 'grunt', 11 + i * 1.5, 0)
+    }
+
+    this.syncHud()
+  }
+
   onStoryClick() {
     if (this.mode === 'brief') this.startLevel()
   }
