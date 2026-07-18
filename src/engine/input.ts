@@ -23,39 +23,42 @@ export class Input {
     this.pressed.clear()
   }
 
+  /** Arrow keys only for movement. */
   moveX() {
     let x = 0
-    if (this.down('KeyA') || this.down('ArrowLeft')) x -= 1
-    if (this.down('KeyD') || this.down('ArrowRight')) x += 1
+    if (this.down('ArrowLeft')) x -= 1
+    if (this.down('ArrowRight')) x += 1
     return x
   }
 
-  /** Aim up — separate from jump (Contra-style). */
   aimUp() {
-    return this.down('KeyW') || this.down('ArrowUp')
+    return this.down('ArrowUp')
   }
 
   aimDown() {
-    return this.down('KeyS') || this.down('ArrowDown')
+    return this.down('ArrowDown')
   }
 
+  /** Jump — X / C / Shift (Space is fire). */
   jump() {
-    return this.just('Space') || this.just('KeyK')
+    return this.just('KeyX') || this.just('KeyC') || this.just('ShiftLeft') || this.just('ShiftRight')
   }
 
   jumpHeld() {
-    return this.down('Space') || this.down('KeyK')
+    return this.down('KeyX') || this.down('KeyC') || this.down('ShiftLeft') || this.down('ShiftRight')
   }
 
+  /** Hold Z to duck and let high shots miss. */
   duck() {
-    return (this.down('KeyS') || this.down('ArrowDown')) && !this.aimUp()
+    return this.down('KeyZ')
   }
 
+  /** Spacebar fires. */
   fire() {
-    return this.down('KeyJ') || this.down('KeyZ')
+    return this.down('Space')
   }
 
   confirm() {
-    return this.just('Enter') || this.just('Space')
+    return this.just('Enter')
   }
 }

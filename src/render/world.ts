@@ -1,8 +1,10 @@
 import * as THREE from 'three'
 import type { LevelTheme } from '../levels/themes'
+import { TEX, pbr } from './textures'
 
 export class WorldBuilder {
   group = new THREE.Group()
+  platforms: { x: number; y: number; w: number; h: number }[] = []
 
   build(level: LevelTheme, length: number) {
     while (this.group.children.length) {
@@ -19,141 +21,150 @@ export class WorldBuilder {
       })
     }
 
-    const accent = parseInt(level.accent.replace('#', ''), 16)
-    const groundCol = parseInt(level.ground.replace('#', ''), 16)
+    const groundMap = level.id === 0 ? TEX.grass : level.id === 1 ? TEX.concrete : TEX.rock
+    const groundColor = level.id === 0 ? 0x3d5a2e : level.id === 1 ? 0x5a5a58 : 0x4a3830
 
-    // Ground strip
-    const ground = new THREE.Mesh(
-      new THREE.BoxGeometry(length + 40, 1.2, 8),
-      new THREE.MeshStandardMaterial({ color: groundCol, metalness: 0.35, roughness: 0.7 }),
-    )
-    ground.position.set(length / 2, -0.6, 0)
+    // Main ground
+    const groundMat = pbr(groundColor, { map: groundMap, metalness: 0.08, roughness: 0.92, repeat: length / 4 })
+    if (groundMat.map) groundMat.map = groundMat.map.clone()
+    if (groundMat.map) {
+      groundMat.map.repeat.set(length / 3, 2)
+      groundMat.map.needsUpdate = true
+    }
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(length + 40, 1.4, 10), groundMat)
+    ground.position.set(length / 2, -0.7, 0)
     ground.receiveShadow = true
     this.group.add(ground)
 
-    // Neon edge
-    const edge = new THREE.Mesh(
-      new THREE.BoxGeometry(length + 40, 0.08, 8.2),
-      new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.4, metalness: 0.2, roughness: 0.3 }),
+    // Dirt shoulder / cliff face
+    const cliff = new THREE.Mesh(
+      new THREE.BoxGeometry(length + 40, 14, 2.5),
+      pbr(level.id === 2 ? 0x3a2820 : 0x4a4538, { map: TEX.rock, metalness: 0.1, roughness: 0.9 }),
     )
-    edge.position.set(length / 2, 0.02, 0)
-    this.group.add(edge)
+    cliff.position.set(length / 2, 5.5, -5.2)
+    cliff.receiveShadow = true
+    this.group.add(cliff)
 
-    // Back wall / canyon
-    const wall = new THREE.Mesh(
-      new THREE.BoxGeometry(length + 40, 18, 1),
-      new THREE.MeshStandardMaterial({ color: 0x0a0c12, metalness: 0.5, roughness: 0.85 }),
-    )
-    wall.position.set(length / 2, 8, -4.2)
-    this.group.add(wall)
-
-    // Accent panels on wall
-    for (let x = 8; x < length; x += 14) {
-      const panel = new THREE.Mesh(
-        new THREE.PlaneGeometry(3 + (x % 5), 2.2),
-        new THREE.MeshStandardMaterial({
-          color: accent,
-          emissive: accent,
-          emissiveIntensity: 0.55,
-          transparent: true,
-          opacity: 0.35,
-        }),
+    // Far ridge
+    for (let x = 0; x < length; x += 7) {
+      const h = 3 + Math.sin(x * 0.2) * 1.5 + (x % 5) * 0.3
+      const ridge = new THREE.Mesh(
+        new THREE.BoxGeometry(6.5, h, 3),
+        pbr(0x2a3228, { map: TEX.rock, metalness: 0.05, roughness: 0.95 }),
       )
-      panel.position.set(x, 3 + (x % 7) * 0.3, -3.65)
-      this.group.add(panel)
+      ridge.position.set(x, h * 0.35, -7.5)
+      ridge.receiveShadow = true
+      this.group.add(ridge)
     }
 
-    // Silhouette props
-    for (let x = 6; x < length - 10; x += 9 + (x % 5)) {
-      if (level.id === 0) this.addTree(x, accent)
-      else if (level.id === 1) this.addTower(x, accent)
-      else this.addSpire(x, accent)
+    // Props
+    for (let x = 5; x < length - 8; x += 6 + (x % 4)) {
+      if (level.id === 0) this.addRealisticTree(x, -2.4 + (x % 3) * 0.3)
+      else if (level.id === 1) this.addBunker(x)
+      else this.addRuin(x)
     }
 
-    // Floating debris / energy motes
-    for (let i = 0; i < 40; i++) {
-      const mote = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06 + Math.random() * 0.08, 6, 6),
-        new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.55 }),
+    // Ground scatter rocks
+    for (let i = 0; i < 35; i++) {
+      const rx = 3 + Math.random() * (length - 6)
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.15 + Math.random() * 0.35, 0),
+        pbr(0x6a655c, { map: TEX.rock, metalness: 0.05, roughness: 0.9 }),
       )
-      mote.position.set(Math.random() * length, 1 + Math.random() * 8, -1 + Math.random() * 2)
-      mote.userData.bob = Math.random() * Math.PI * 2
-      mote.userData.baseY = mote.position.y
-      this.group.add(mote)
+      rock.position.set(rx, 0.12, -1.2 + Math.random() * 2.5)
+      rock.rotation.set(Math.random(), Math.random(), Math.random())
+      rock.castShadow = true
+      rock.receiveShadow = true
+      this.group.add(rock)
     }
 
-    // Platforms
+    // Platforms — weathered stone / metal
     this.platforms = [{ x: 0, y: 0, w: length + 20, h: 0.5 }]
     for (let x = 12; x < length - 15; x += 8 + Math.random() * 6) {
       const w = 2.5 + Math.random() * 2.5
       const y = 1.6 + Math.random() * 2.8
       const plat = new THREE.Mesh(
-        new THREE.BoxGeometry(w, 0.25, 2.2),
-        new THREE.MeshStandardMaterial({
-          color: 0x1a1a28,
-          emissive: accent,
-          emissiveIntensity: 0.35,
-          metalness: 0.6,
-          roughness: 0.35,
+        new THREE.BoxGeometry(w, 0.28, 2.4),
+        pbr(level.id === 1 ? 0x55565a : 0x5a5348, {
+          map: level.id === 1 ? TEX.metal : TEX.rock,
+          metalness: level.id === 1 ? 0.55 : 0.1,
+          roughness: level.id === 1 ? 0.45 : 0.85,
         }),
       )
       plat.position.set(x + w / 2, y, 0)
       plat.castShadow = true
       plat.receiveShadow = true
       this.group.add(plat)
-      this.platforms.push({ x, y: y + 0.12, w, h: 0.25 })
+      this.platforms.push({ x, y: y + 0.14, w, h: 0.28 })
     }
   }
 
-  platforms: { x: number; y: number; w: number; h: number }[] = []
-
-  private addTree(x: number, accent: number) {
+  private addRealisticTree(x: number, z: number) {
     const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.22, 3.2, 6),
-      new THREE.MeshStandardMaterial({ color: 0x1c2a1c, roughness: 0.9 }),
+      new THREE.CylinderGeometry(0.12, 0.2, 2.8, 8),
+      pbr(0x5a3a22, { map: TEX.bark, metalness: 0.02, roughness: 0.92 }),
     )
-    trunk.position.set(x, 1.6, -2.2)
+    trunk.position.set(x, 1.4, z)
     trunk.castShadow = true
     this.group.add(trunk)
-    const canopy = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(1.1, 0),
-      new THREE.MeshStandardMaterial({ color: 0x14532d, emissive: accent, emissiveIntensity: 0.15, roughness: 0.8 }),
-    )
-    canopy.position.set(x, 3.6, -2.2)
-    this.group.add(canopy)
-  }
 
-  private addTower(x: number, accent: number) {
-    const t = new THREE.Mesh(
-      new THREE.BoxGeometry(1.2, 5.5, 1.2),
-      new THREE.MeshStandardMaterial({ color: 0x221828, metalness: 0.7, roughness: 0.4, emissive: accent, emissiveIntensity: 0.2 }),
-    )
-    t.position.set(x, 2.75, -2.4)
-    t.castShadow = true
-    this.group.add(t)
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.35, 1.6),
-      new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.2 }),
-    )
-    top.position.set(x, 5.6, -2.4)
-    this.group.add(top)
-  }
-
-  private addSpire(x: number, accent: number) {
-    const s = new THREE.Mesh(
-      new THREE.ConeGeometry(0.5, 7, 5),
-      new THREE.MeshStandardMaterial({ color: 0x2a1010, emissive: accent, emissiveIntensity: 0.45, metalness: 0.5, roughness: 0.35 }),
-    )
-    s.position.set(x, 3.5, -2.5)
-    s.castShadow = true
-    this.group.add(s)
-  }
-
-  update(t: number) {
-    for (const c of this.group.children) {
-      if (c.userData.bob != null) {
-        c.position.y = c.userData.baseY + Math.sin(t * 1.5 + c.userData.bob) * 0.25
-      }
+    const leafMat = pbr(0x2f6b2a, { map: TEX.grass, metalness: 0.02, roughness: 0.85 })
+    for (let i = 0; i < 4; i++) {
+      const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.7 + Math.random() * 0.35, 10, 8), leafMat)
+      canopy.position.set(
+        x + (Math.random() - 0.5) * 0.5,
+        2.8 + i * 0.35,
+        z + (Math.random() - 0.5) * 0.4,
+      )
+      canopy.scale.y = 0.75
+      canopy.castShadow = true
+      this.group.add(canopy)
     }
+  }
+
+  private addBunker(x: number) {
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 2.4, 1.8),
+      pbr(0x6a6a66, { map: TEX.concrete, metalness: 0.15, roughness: 0.88 }),
+    )
+    wall.position.set(x, 1.2, -2.6)
+    wall.castShadow = true
+    wall.receiveShadow = true
+    this.group.add(wall)
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, 0.25, 2.1),
+      pbr(0x4a4a48, { map: TEX.metal, metalness: 0.5, roughness: 0.5 }),
+    )
+    roof.position.set(x, 2.5, -2.6)
+    roof.castShadow = true
+    this.group.add(roof)
+    const vent = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 0.5, 8),
+      pbr(0x333, { metalness: 0.7, roughness: 0.4 }),
+    )
+    vent.position.set(x + 0.6, 2.85, -2.6)
+    this.group.add(vent)
+  }
+
+  private addRuin(x: number) {
+    const pillar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 4.5, 0.7),
+      pbr(0x4a3830, { map: TEX.rock, metalness: 0.1, roughness: 0.9 }),
+    )
+    pillar.position.set(x, 2.2, -2.8)
+    pillar.castShadow = true
+    this.group.add(pillar)
+    const broken = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.4, 0.7),
+      pbr(0x3a2820, { map: TEX.rock, metalness: 0.1, roughness: 0.9 }),
+    )
+    broken.position.set(x + 0.4, 4.2, -2.8)
+    broken.rotation.z = 0.35
+    broken.castShadow = true
+    this.group.add(broken)
+  }
+
+  update(_t: number) {
+    // static world — no neon motes
   }
 }

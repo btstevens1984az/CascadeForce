@@ -86,15 +86,16 @@ export class Game {
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.15
+    this.renderer.toneMappingExposure = 1.35
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
 
-    this.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 200)
-    this.camera.position.set(0, 3.2, 14)
+    this.camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 220)
+    this.camera.position.set(0, 3.4, 13)
 
     this.composer = new EffectComposer(this.renderer)
     this.composer.addPass(new RenderPass(this.scene, this.camera))
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.85, 0.55, 0.2)
+    // Subtle bloom — realistic highlights, not neon wash
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.28, 0.4, 0.85)
     this.composer.addPass(this.bloom)
 
     this.scene.add(this.root)
@@ -104,24 +105,26 @@ export class Game {
     this.playerMesh.add(this.muzzleLight)
     this.muzzleLight.position.set(0.7, 1.05, 0.2)
 
-    this.hemi = new THREE.HemisphereLight(0x9eb7ff, 0x1a1018, 0.55)
+    this.hemi = new THREE.HemisphereLight(0xd0e4ff, 0x6a5a40, 1.0)
     this.scene.add(this.hemi)
-    this.keyLight = new THREE.DirectionalLight(0xfff0e0, 1.4)
-    this.keyLight.position.set(8, 18, 10)
+    this.scene.add(new THREE.AmbientLight(0xfff5e8, 0.55))
+    this.keyLight = new THREE.DirectionalLight(0xfff4e0, 2.6)
+    this.keyLight.position.set(10, 22, 12)
     this.keyLight.castShadow = true
     this.keyLight.shadow.mapSize.set(2048, 2048)
     this.keyLight.shadow.camera.near = 1
-    this.keyLight.shadow.camera.far = 60
-    this.keyLight.shadow.camera.left = -20
-    this.keyLight.shadow.camera.right = 20
-    this.keyLight.shadow.camera.top = 15
-    this.keyLight.shadow.camera.bottom = -5
+    this.keyLight.shadow.camera.far = 70
+    this.keyLight.shadow.camera.left = -22
+    this.keyLight.shadow.camera.right = 22
+    this.keyLight.shadow.camera.top = 16
+    this.keyLight.shadow.camera.bottom = -6
+    this.keyLight.shadow.bias = -0.00025
     this.scene.add(this.keyLight)
-    this.fill = new THREE.PointLight(0x39e6ff, 1.2, 40)
-    this.fill.position.set(0, 4, 6)
+    this.fill = new THREE.PointLight(0xa8c4ff, 0.55, 50)
+    this.fill.position.set(0, 5, 7)
     this.scene.add(this.fill)
-    this.rim = new THREE.PointLight(0xff3d5a, 0.9, 35)
-    this.rim.position.set(0, 3, -4)
+    this.rim = new THREE.PointLight(0xffd0a0, 0.35, 40)
+    this.rim.position.set(0, 3, -5)
     this.scene.add(this.rim)
 
     this.resize()
@@ -163,7 +166,7 @@ export class Game {
     const bar = this.el('hpBar')
     if (bar) bar.style.transform = `scaleX(${clamp(this.hp / this.maxHp, 0, 1)})`
 
-    let objective = 'Advance — W aims up · S ducks under fire'
+    let objective = 'Arrows move · Space fire · Z duck · X jump'
     if (this.bossSpawned) objective = `Defeat ${this.level.bossName}`
     else if (this.midSpawned && this.enemies.some((e) => e.kind === 'midboss' && !e.dead)) {
       objective = `Defeat ${this.level.midBossName}`
@@ -220,12 +223,13 @@ export class Game {
     this.level = level
     const top = new THREE.Color(level.skyTop)
     const bot = new THREE.Color(level.skyBot)
-    this.scene.background = top.clone().lerp(bot, 0.35)
-    this.scene.fog = new THREE.FogExp2(bot.getHex(), 0.018)
-    const accent = hexToInt(level.accent)
-    this.fill.color.setHex(accent)
-    this.rim.color.setHex(accent)
-    this.bloom.strength = 0.75 + level.difficulty * 0.12
+    this.scene.background = top.clone().lerp(bot, 0.55)
+    this.scene.fog = new THREE.Fog(bot.clone().lerp(top, 0.35).getHex(), 32, 80)
+    this.fill.color.setHex(0xc8dcff)
+    this.rim.color.setHex(0xffe0b8)
+    this.bloom.strength = 0.18
+    this.hemi.intensity = 1.05
+    this.keyLight.intensity = 2.5
   }
 
   startLevel() {
@@ -403,19 +407,19 @@ export class Game {
       return
     }
     if (this.mode === 'dead') {
-      if (this.input.just('Enter') || this.input.just('Space')) this.startLevel()
+      if (this.input.just('Enter')) this.startLevel()
       if (this.input.just('Escape')) this.showTitle()
       this.input.endFrame()
       return
     }
     if (this.mode === 'clear') {
       this.clearTimer -= dt
-      if ((this.input.just('Enter') || this.input.just('Space')) && this.clearTimer < 2.4) this.onOverlayClick()
+      if (this.input.just('Enter') && this.clearTimer < 2.4) this.onOverlayClick()
       this.input.endFrame()
       return
     }
     if (this.mode === 'win') {
-      if (this.input.just('Enter') || this.input.just('Space')) this.showTitle()
+      if (this.input.just('Enter')) this.showTitle()
       this.input.endFrame()
       return
     }

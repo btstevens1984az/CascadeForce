@@ -58,52 +58,52 @@ async function mashKeys(page, action, ms) {
   const end = Date.now() + ms
   while (Date.now() < end) {
     if (action === 'duck') {
-      await page.keyboard.down('KeyS')
-      await page.keyboard.down('KeyJ')
+      await page.keyboard.down('KeyZ')
+      await page.keyboard.down('Space')
       await page.waitForTimeout(450)
-      await page.keyboard.up('KeyS')
-      await page.keyboard.down('KeyD')
+      await page.keyboard.up('KeyZ')
+      await page.keyboard.down('ArrowRight')
       await page.waitForTimeout(300)
-      await page.keyboard.up('KeyD')
+      await page.keyboard.up('ArrowRight')
     } else if (action === 'aimup') {
-      await page.keyboard.down('KeyW')
-      await page.keyboard.down('KeyJ')
-      await page.keyboard.down('KeyD')
+      await page.keyboard.down('ArrowUp')
+      await page.keyboard.down('Space')
+      await page.keyboard.down('ArrowRight')
       await page.waitForTimeout(450)
-      await page.keyboard.up('KeyD')
-      await page.keyboard.down('KeyA')
+      await page.keyboard.up('ArrowRight')
+      await page.keyboard.down('ArrowLeft')
       await page.waitForTimeout(350)
-      await page.keyboard.up('KeyA')
+      await page.keyboard.up('ArrowLeft')
     } else if (action === 'midboss') {
-      await page.keyboard.down('KeyJ')
-      await page.keyboard.down('KeyD')
+      await page.keyboard.down('Space')
+      await page.keyboard.down('ArrowRight')
       await page.waitForTimeout(280)
-      await page.keyboard.press('Space')
+      await page.keyboard.press('KeyX')
       await page.waitForTimeout(350)
-      await page.keyboard.up('KeyD')
-      await page.keyboard.down('KeyA')
+      await page.keyboard.up('ArrowRight')
+      await page.keyboard.down('ArrowLeft')
       await page.waitForTimeout(300)
-      await page.keyboard.up('KeyA')
+      await page.keyboard.up('ArrowLeft')
     } else if (action === 'title') {
       await page.waitForTimeout(500)
     } else {
-      await page.keyboard.down('KeyJ')
-      await page.keyboard.down('KeyD')
+      await page.keyboard.down('Space')
+      await page.keyboard.down('ArrowRight')
       await page.waitForTimeout(260)
-      await page.keyboard.press('Space')
+      await page.keyboard.press('KeyX')
       await page.waitForTimeout(220)
-      await page.keyboard.up('KeyD')
-      await page.keyboard.down('KeyA')
+      await page.keyboard.up('ArrowRight')
+      await page.keyboard.down('ArrowLeft')
       await page.waitForTimeout(240)
-      await page.keyboard.up('KeyA')
+      await page.keyboard.up('ArrowLeft')
       if (action === 'spread' || action === 'inferno') {
-        await page.keyboard.down('KeyW')
+        await page.keyboard.down('ArrowUp')
         await page.waitForTimeout(180)
-        await page.keyboard.up('KeyW')
+        await page.keyboard.up('ArrowUp')
       }
     }
   }
-  for (const k of ['KeyJ', 'KeyW', 'KeyS', 'KeyA', 'KeyD']) {
+  for (const k of ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyZ', 'KeyX']) {
     await page.keyboard.up(k)
   }
 }
@@ -170,7 +170,7 @@ async function main() {
       }, clip.action)
       await page.waitForTimeout(350)
       // Hold fire briefly then still
-      await page.keyboard.down('KeyJ')
+      await page.keyboard.down('Space')
       await page.waitForTimeout(400)
       await page.screenshot({ path: path.join(media, `${clip.id}.png`), type: 'png' })
       await mashKeys(page, clip.action, 4800)
