@@ -37,8 +37,8 @@ export const LEVELS: LevelTheme[] = [
     bossName: 'ROOTBREAKER MK-I',
     midBossHp: 320,
     bossHp: 560,
-    enemyRate: 2.4,
-    difficulty: 0.55,
+    enemyRate: 1.15,
+    difficulty: 0.65,
   },
   {
     id: 1,
@@ -56,7 +56,7 @@ export const LEVELS: LevelTheme[] = [
     bossName: 'FORTRESS CORE',
     midBossHp: 520,
     bossHp: 900,
-    enemyRate: 1.55,
+    enemyRate: 0.85,
     difficulty: 1.0,
   },
   {
@@ -75,7 +75,7 @@ export const LEVELS: LevelTheme[] = [
     bossName: 'CASCADE OVERLORD',
     midBossHp: 780,
     bossHp: 1500,
-    enemyRate: 1.05,
+    enemyRate: 0.55,
     difficulty: 1.65,
   },
 ]

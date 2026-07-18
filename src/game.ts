@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { Input } from './engine/input'
 import { Sfx } from './audio/sfx'
+import { Music } from './audio/music'
 import {
   aabb, clamp, lerp, rand, hexToInt,
   type Bullet, type Enemy, type Pickup, type WeaponId,
@@ -24,6 +25,7 @@ export class Game {
   canvas: HTMLCanvasElement
   input = new Input()
   sfx = new Sfx()
+  music = new Music()
 
   renderer: THREE.WebGLRenderer
   scene = new THREE.Scene()
@@ -250,7 +252,7 @@ export class Game {
     this.camX = 0
     this.t = 0
     // Warm-up before the first wave
-    this.spawnTimer = this.levelIndex === 0 ? 3.5 : this.levelIndex === 1 ? 2.2 : 1.4
+    this.spawnTimer = this.levelIndex === 0 ? 1.8 : this.levelIndex === 1 ? 1.2 : 0.8
     this.midSpawned = false
     this.bossSpawned = false
     this.clearActors()
@@ -285,7 +287,10 @@ export class Game {
   }
 
   onStartClick() {
-    if (this.mode === 'title') this.startBrief(0)
+    if (this.mode === 'title') {
+      this.music.start()
+      this.startBrief(0)
+    }
   }
 
   /**
@@ -345,7 +350,10 @@ export class Game {
   }
 
   onStoryClick() {
-    if (this.mode === 'brief') this.startLevel()
+    if (this.mode === 'brief') {
+      this.music.start()
+      this.startLevel()
+    }
   }
 
   onOverlayClick() {
@@ -400,13 +408,19 @@ export class Game {
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 8)
 
     if (this.mode === 'title') {
-      if (this.input.just('Enter')) this.startBrief(0)
+      if (this.input.just('Enter')) {
+        this.music.start()
+        this.startBrief(0)
+      }
       this.idleCam(dt)
       this.input.endFrame()
       return
     }
     if (this.mode === 'brief') {
-      if (this.input.just('Enter')) this.startLevel()
+      if (this.input.just('Enter')) {
+        this.music.start()
+        this.startLevel()
+      }
       this.idleCam(dt)
       this.input.endFrame()
       return
@@ -435,6 +449,12 @@ export class Game {
     if (this.mode !== 'play' && this.mode !== 'bossbanner') {
       this.input.endFrame()
       return
+    }
+
+    if (this.input.just('KeyM')) {
+      const muted = this.music.toggleMute()
+      const el = this.el('objective')
+      if (el && !this.bossSpawned) el.textContent = muted ? 'Music muted (M)' : 'Music on (M to mute)'
     }
 
     this.updatePlayer(dt)
@@ -577,7 +597,7 @@ export class Game {
     if (this.enemies.some((e) => (e.kind === 'midboss' || e.kind === 'boss') && !e.dead)) return
 
     // Cap live fodder so the screen never floods
-    const maxLive = this.levelIndex === 0 ? 3 : this.levelIndex === 1 ? 5 : 7
+    const maxLive = this.levelIndex === 0 ? 7 : this.levelIndex === 1 ? 10 : 13
     if (this.enemies.filter((e) => !e.dead && e.kind !== 'midboss' && e.kind !== 'boss').length >= maxLive) {
       return
     }
@@ -585,25 +605,32 @@ export class Game {
     this.spawnTimer -= dt
     if (this.spawnTimer > 0) return
     const p = this.pressure()
-    const rate = this.level.enemyRate * lerp(1.35, 0.75, p) * rand(0.85, 1.15)
+    const rate = this.level.enemyRate * lerp(1.05, 0.65, p) * rand(0.8, 1.1)
     this.spawnTimer = rate
 
-    // Early: mostly slow grunts. Later: mix in flyers/heavies.
+    // Early: mostly grunts, but still a crowd. Later: mix flyers/heavies.
     let kind: Enemy['kind'] = 'grunt'
     const roll = Math.random()
-    if (this.levelIndex === 0 && p < 0.35) {
+    if (this.levelIndex === 0 && p < 0.25) {
+      kind = roll < 0.85 ? 'grunt' : 'flyer'
+    } else if (roll < 0.5 - p * 0.1) {
       kind = 'grunt'
-    } else if (roll < 0.55 - p * 0.15) {
-      kind = 'grunt'
-    } else if (roll < 0.82) {
+    } else if (roll < 0.78) {
       kind = 'flyer'
     } else {
-      kind = this.levelIndex === 0 && p < 0.5 ? 'grunt' : 'heavy'
+      kind = 'heavy'
     }
 
-    const x = this.camX + 16 + rand(0, 3)
+    // Sometimes spawn a pair for denser waves
+    const x = this.camX + 15 + rand(0, 4)
     if (kind === 'flyer') this.spawnEnemy(kind, x, 1.5 + rand(0, 1.2))
     else this.spawnEnemy(kind, x, 0)
+    if (p > 0.2 && Math.random() < 0.4) {
+      const x2 = x + rand(1.2, 2.4)
+      const k2: Enemy['kind'] = Math.random() < 0.7 ? 'grunt' : 'flyer'
+      if (k2 === 'flyer') this.spawnEnemy(k2, x2, 2 + rand(0, 1))
+      else this.spawnEnemy(k2, x2, 0)
+    }
   }
 
   spawnEnemy(kind: Enemy['kind'], x: number, y: number, overrides: Partial<Enemy> = {}) {
@@ -722,7 +749,7 @@ export class Game {
     const p = this.pressure()
 
     // Soft cap on enemy projectiles — early game stays readable
-    const bulletCap = this.levelIndex === 0 ? 6 : this.levelIndex === 1 ? 10 : 16
+    const bulletCap = this.levelIndex === 0 ? 10 : this.levelIndex === 1 ? 14 : 20
     if (this.enemyBulletCount() >= bulletCap) {
       e.fireCd = 0.4
       return

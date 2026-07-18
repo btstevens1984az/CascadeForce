@@ -13,7 +13,7 @@ npm run dev
 
 Open **http://localhost:5174**.
 
-**Controls:** **← →** move · **Space** fire · **Z / ↓** duck · **W / X** jump · **↑** aim up · **Enter** start
+**Controls:** **← →** move · **Space** fire · **Z / ↓** duck · **W / X** jump · **↑** aim up · **M** mute · **Enter** start
 
 ---
 
@@ -94,9 +94,14 @@ npm run capture
 | 2 | Baseline Siege | Rail Crusher | Fortress Core |
 | 3 | Red Cascade | Void Sentinel | **Cascade Overlord** |
 
+## Audio
+
+Original procedural combat groove (WebAudio) — industrial / groove-metal inspired.
+**Not** Pantera or any commercial recording. Press **M** in-game to mute.
+
 ## Stack
 
-Vite · TypeScript · Three.js · EffectComposer bloom
+Vite · TypeScript · Three.js · EffectComposer bloom · WebAudio SFX/BGM
 
 ## License
 
