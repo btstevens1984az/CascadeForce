@@ -547,9 +547,9 @@ export class Game {
   spawnEnemy(kind: Enemy['kind'], x: number, y: number, overrides: Partial<Enemy> = {}) {
     const d = this.level.difficulty
     const base: Record<string, Partial<Enemy>> = {
-      grunt: { w: 0.7, h: 1.5, hp: 28 * d, vx: -2.2 },
-      flyer: { w: 0.9, h: 0.6, hp: 22 * d, vx: -3.2 },
-      heavy: { w: 1.1, h: 1.6, hp: 70 * d, vx: -1.4 },
+      grunt: { w: 0.9, h: 1.75, hp: 28 * d, vx: -1.8 },
+      flyer: { w: 0.95, h: 1.7, hp: 24 * d, vx: -2.6 },
+      heavy: { w: 1.15, h: 1.9, hp: 75 * d, vx: -1.2 },
     }
     const b = base[kind] || { w: 0.8, h: 1.2, hp: 40, vx: -2 }
     let mesh: THREE.Object3D
@@ -619,17 +619,19 @@ export class Game {
 
       if (e.kind === 'flyer') {
         e.x += e.vx * dt
-        e.y = 2.2 + Math.sin(e.t * 3) * 0.8
+        e.y = 1.4 + Math.sin(e.t * 3) * 0.55
       } else if (e.kind === 'grunt' || e.kind === 'heavy') {
         e.x += e.vx * dt
         e.y = 0
+        // shambling bob
+        if (e.mesh) e.mesh.rotation.z = Math.sin(e.t * 4) * 0.04
       } else {
         const targetX = this.camX + 9 + Math.sin(e.t * 0.7) * 0.8
         e.x = lerp(e.x, targetX, 1 - Math.pow(0.02, dt))
         e.y = e.kind === 'boss' ? 0.2 + Math.sin(e.t * 1.2) * 0.15 : 0
         const ratio = e.hp / e.maxHp
         e.phase = ratio < 0.35 ? 2 : ratio < 0.7 ? 1 : 0
-        if (e.mesh) e.mesh.rotation.y = e.t * (e.kind === 'boss' ? 0.8 : 0.4)
+        if (e.mesh && e.kind === 'boss') e.mesh.rotation.y = e.t * 0.5
       }
 
       if (e.fireCd <= 0 && e.x - this.camX < 18) this.enemyFire(e)
@@ -726,18 +728,20 @@ export class Game {
         let bestD = 999
         for (const e of this.enemies) {
           if (e.dead) continue
-          const dist = Math.hypot(e.x - b.x, e.y + e.h / 2 - b.y)
+          const dist = Math.hypot(e.x - b.x, e.y + e.h * 0.55 - b.y)
           if (dist < bestD) { bestD = dist; best = e }
         }
         if (best) {
           const dx = best.x - b.x
-          const dy = best.y + best.h / 2 - b.y
+          const dy = best.y + best.h * 0.55 - b.y
           const len = Math.hypot(dx, dy) || 1
-          b.vx = lerp(b.vx, (dx / len) * 14, 1 - Math.pow(0.05, dt))
-          b.vy = lerp(b.vy, (dy / len) * 14, 1 - Math.pow(0.05, dt))
+          b.vx = lerp(b.vx, (dx / len) * 18, 1 - Math.pow(0.04, dt))
+          b.vy = lerp(b.vy, (dy / len) * 18, 1 - Math.pow(0.04, dt))
         }
       }
 
+      const ox = b.x
+      const oy = b.y
       b.x += b.vx * dt
       b.y += b.vy * dt
 
@@ -745,9 +749,10 @@ export class Game {
         let hit = false
         for (const e of this.enemies) {
           if (e.dead) continue
-          if (Math.hypot(b.x - e.x, b.y - (e.y + e.h / 2)) < b.radius + e.w * 0.35) {
+          // Swept circle vs enemy AABB (stops tunneling)
+          if (this.bulletHitsEnemy(ox, oy, b.x, b.y, b.radius, e)) {
             e.hp -= b.damage
-            this.fx.explode(b.x, b.y, hexToInt(b.color), 8, 5)
+            this.fx.explode(b.x, b.y, hexToInt(b.color), 10, 6)
             if (e.hp <= 0) this.killEnemy(e)
             if (b.pierce && b.pierce > 0) b.pierce--
             else hit = true
@@ -760,9 +765,7 @@ export class Game {
         }
       } else if (this.invuln <= 0) {
         const hb = this.playerHitbox()
-        const cx = clamp(b.x, hb.x, hb.x + hb.w)
-        const cy = clamp(b.y, hb.y, hb.y + hb.h)
-        if (Math.hypot(b.x - cx, b.y - cy) < b.radius) {
+        if (this.segmentHitsAabb(ox, oy, b.x, b.y, b.radius, hb)) {
           this.hurt(b.damage)
           this.fx.explode(b.x, b.y, 0xffffff, 10, 5)
           if (b.mesh) this.root.remove(b.mesh)
@@ -777,6 +780,49 @@ export class Game {
       next.push(b)
     }
     this.bullets = next
+  }
+
+  /** Closest distance from segment A→B to point P. */
+  private segPointDist(ax: number, ay: number, bx: number, by: number, px: number, py: number) {
+    const abx = bx - ax
+    const aby = by - ay
+    const apx = px - ax
+    const apy = py - ay
+    const ab2 = abx * abx + aby * aby || 1e-6
+    const t = clamp((apx * abx + apy * aby) / ab2, 0, 1)
+    const cx = ax + abx * t
+    const cy = ay + aby * t
+    return Math.hypot(px - cx, py - cy)
+  }
+
+  private bulletHitsEnemy(ox: number, oy: number, nx: number, ny: number, radius: number, e: Enemy) {
+    const box = {
+      x: e.x - e.w * 0.5,
+      y: e.y,
+      w: e.w,
+      h: e.h,
+    }
+    return this.segmentHitsAabb(ox, oy, nx, ny, radius, box)
+  }
+
+  private segmentHitsAabb(
+    ox: number, oy: number, nx: number, ny: number, radius: number,
+    box: { x: number; y: number; w: number; h: number },
+  ) {
+    // Expand AABB by bullet radius, then test segment vs expanded box via clamp
+    const samples = 4
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples
+      const x = ox + (nx - ox) * t
+      const y = oy + (ny - oy) * t
+      const cx = clamp(x, box.x, box.x + box.w)
+      const cy = clamp(y, box.y, box.y + box.h)
+      if (Math.hypot(x - cx, y - cy) <= radius) return true
+    }
+    // Also center-mass check for large targets
+    const midX = box.x + box.w * 0.5
+    const midY = box.y + box.h * 0.55
+    return this.segPointDist(ox, oy, nx, ny, midX, midY) <= radius + Math.max(box.w, box.h) * 0.25
   }
 
   killEnemy(e: Enemy) {

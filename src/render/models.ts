@@ -17,79 +17,98 @@ type HumanKit = {
   helmet?: boolean
   mask?: boolean
   enemyTint?: boolean
+  zombie?: boolean
 }
 
 function addHumanoid(root: THREE.Group, kit: HumanKit, scale = 1) {
-  const skin = pbr(kit.skin, { metalness: 0.02, roughness: 0.62 })
-  const shirt = pbr(kit.shirt, { map: TEX.grass, metalness: 0.05, roughness: 0.82 })
-  const pants = pbr(kit.pants, { map: TEX.dirt, metalness: 0.05, roughness: 0.85 })
-  const armor = pbr(kit.armor, { map: TEX.metal, metalness: 0.45, roughness: 0.48 })
-  const boot = pbr(kit.boot, { metalness: 0.15, roughness: 0.7 })
-  const hairMat = pbr(kit.hair, { metalness: 0.05, roughness: 0.75 })
+  const skin = pbr(kit.skin, { metalness: 0.02, roughness: kit.zombie ? 0.78 : 0.62 })
+  const shirt = pbr(kit.shirt, { map: TEX.dirt, metalness: 0.05, roughness: 0.88 })
+  const pants = pbr(kit.pants, { map: TEX.dirt, metalness: 0.05, roughness: 0.88 })
+  const armor = pbr(kit.armor, { map: TEX.metal, metalness: kit.zombie ? 0.25 : 0.45, roughness: 0.55 })
+  const boot = pbr(kit.boot, { metalness: 0.15, roughness: 0.75 })
+  const hairMat = pbr(kit.hair, { metalness: 0.05, roughness: 0.8 })
+  const wound = pbr(0x4a1010, { metalness: 0.05, roughness: 0.7 })
 
   const body = new THREE.Group()
   body.scale.setScalar(scale)
+  if (kit.zombie) {
+    body.rotation.x = 0.12 // hunched shambling posture
+    body.position.y = -0.05
+  }
   root.add(body)
 
-  // --- Legs (hip → foot) ---
+  // --- Legs ---
   for (const side of [-1, 1] as const) {
     const hipX = side * 0.11
     const thigh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.32, 5, 10), pants))
-    thigh.position.set(hipX, 0.55, 0)
+    thigh.position.set(hipX, 0.55, kit.zombie ? 0.04 : 0)
     body.add(thigh)
 
     const shin = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.3, 5, 10), pants))
-    shin.position.set(hipX, 0.28, 0.02)
+    shin.position.set(hipX, 0.28, kit.zombie ? 0.06 : 0.02)
     body.add(shin)
 
     const foot = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.24), boot))
     foot.position.set(hipX, 0.05, 0.05)
     body.add(foot)
 
-    // knee pad
-    const knee = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), armor))
-    knee.position.set(hipX, 0.4, 0.06)
-    body.add(knee)
+    if (!kit.zombie) {
+      const knee = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), armor))
+      knee.position.set(hipX, 0.4, 0.06)
+      body.add(knee)
+    } else if (side === 1) {
+      // exposed bone / wound on one leg
+      const gash = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.04), wound))
+      gash.position.set(hipX + 0.06, 0.42, 0.08)
+      body.add(gash)
+    }
   }
 
-  // hips / belt
   const hips = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.18, 12), pants))
   hips.position.y = 0.78
   body.add(hips)
-  const belt = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 6, 16), armor))
-  belt.rotation.x = Math.PI / 2
-  belt.position.y = 0.86
-  body.add(belt)
 
-  // torso
+  if (!kit.zombie) {
+    const belt = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 6, 16), armor))
+    belt.rotation.x = Math.PI / 2
+    belt.position.y = 0.86
+    body.add(belt)
+  }
+
   const abdomen = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.22, 5, 12), shirt))
   abdomen.position.y = 1.05
   body.add(abdomen)
 
-  const chest = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.26), armor))
+  const chest = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.26), kit.zombie ? shirt : armor))
   chest.position.y = 1.28
   body.add(chest)
 
-  // vest straps / pouches for readability
-  const pouch = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.08), pbr(0x2a2e28, { metalness: 0.2, roughness: 0.7 })))
-  pouch.position.set(0.14, 1.18, 0.16)
-  body.add(pouch)
-  const pouch2 = pouch.clone()
-  pouch2.position.x = -0.14
-  body.add(pouch2)
+  if (kit.zombie) {
+    // torn fabric flaps + wounds
+    const tear = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 0.04), wound))
+    tear.position.set(0.12, 1.22, 0.14)
+    body.add(tear)
+    const rib = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.03), pbr(0xd8d0c0, { roughness: 0.55 })))
+    rib.position.set(-0.08, 1.3, 0.14)
+    body.add(rib)
+  } else {
+    const pouch = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.08), pbr(0x2a2e28, { metalness: 0.2, roughness: 0.7 })))
+    pouch.position.set(0.14, 1.18, 0.16)
+    body.add(pouch)
+    const pouch2 = pouch.clone()
+    pouch2.position.x = -0.14
+    body.add(pouch2)
+  }
 
-  // neck
   const neck = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.1, 10), skin))
   neck.position.y = 1.52
   body.add(neck)
 
-  // head — slightly oval, human proportions
   const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.135, 18, 14), skin))
   head.scale.set(0.95, 1.08, 0.92)
   head.position.y = 1.68
   body.add(head)
 
-  // ears
   for (const side of [-1, 1] as const) {
     const ear = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), skin))
     ear.scale.set(0.5, 1, 0.7)
@@ -97,33 +116,59 @@ function addHumanoid(root: THREE.Group, kit: HumanKit, scale = 1) {
     body.add(ear)
   }
 
-  // face: eyes, brows, nose, mouth
-  const eyeWhite = pbr(0xf2f2f0, { metalness: 0.05, roughness: 0.4 })
-  const iris = pbr(kit.enemyTint ? 0x5a2020 : 0x2a3a4a, { metalness: 0.1, roughness: 0.35 })
-  for (const side of [-1, 1] as const) {
-    const white = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), eyeWhite))
-    white.position.set(side * 0.045, 1.7, 0.11)
-    body.add(white)
-    const pupil = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), iris))
-    pupil.position.set(side * 0.045, 1.7, 0.13)
-    body.add(pupil)
-    const brow = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.02), hairMat))
-    brow.position.set(side * 0.045, 1.735, 0.12)
-    brow.rotation.z = side * -0.15
-    body.add(brow)
+  // face
+  if (kit.zombie) {
+    // milky / glowing dead eyes
+    for (const side of [-1, 1] as const) {
+      const eye = shadow(new THREE.Mesh(
+        new THREE.SphereGeometry(0.032, 10, 8),
+        new THREE.MeshStandardMaterial({
+          color: 0xc8e8a0,
+          emissive: 0x88aa33,
+          emissiveIntensity: 0.7,
+          roughness: 0.35,
+        }),
+      ))
+      eye.position.set(side * 0.045, 1.7, 0.12)
+      body.add(eye)
+    }
+    // hanging jaw
+    const jaw = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.06), skin))
+    jaw.position.set(0, 1.58, 0.1)
+    jaw.rotation.x = 0.45
+    body.add(jaw)
+    const teeth = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.03), pbr(0xe8e0d0, { roughness: 0.4 })))
+    teeth.position.set(0, 1.6, 0.13)
+    body.add(teeth)
+    // cheek wound
+    const cheek = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), wound))
+    cheek.position.set(0.1, 1.65, 0.1)
+    body.add(cheek)
+  } else {
+    const eyeWhite = pbr(0xf2f2f0, { metalness: 0.05, roughness: 0.4 })
+    const iris = pbr(0x2a3a4a, { metalness: 0.1, roughness: 0.35 })
+    for (const side of [-1, 1] as const) {
+      const white = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), eyeWhite))
+      white.position.set(side * 0.045, 1.7, 0.11)
+      body.add(white)
+      const pupil = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), iris))
+      pupil.position.set(side * 0.045, 1.7, 0.13)
+      body.add(pupil)
+      const brow = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.02), hairMat))
+      brow.position.set(side * 0.045, 1.735, 0.12)
+      brow.rotation.z = side * -0.15
+      body.add(brow)
+    }
+    const nose = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.06, 6), skin))
+    nose.rotation.x = Math.PI / 2
+    nose.position.set(0, 1.665, 0.13)
+    body.add(nose)
+    const mouth = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.015), pbr(0x8a4a4a, { roughness: 0.6 })))
+    mouth.position.set(0, 1.615, 0.12)
+    body.add(mouth)
   }
 
-  const nose = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.06, 6), skin))
-  nose.rotation.x = Math.PI / 2
-  nose.position.set(0, 1.665, 0.13)
-  body.add(nose)
-
-  const mouth = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.015), pbr(0x8a4a4a, { roughness: 0.6 })))
-  mouth.position.set(0, 1.615, 0.12)
-  body.add(mouth)
-
-  // hair or helmet
-  if (kit.helmet) {
+  if (kit.helmet && !kit.zombie) {
     const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), armor))
     helm.scale.set(1.05, 0.72, 1.1)
     helm.position.y = 1.74
@@ -132,47 +177,74 @@ function addHumanoid(root: THREE.Group, kit: HumanKit, scale = 1) {
     brim.position.set(0, 1.66, 0.08)
     body.add(brim)
   } else {
+    // ragged / patchy hair
     const hair = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), hairMat))
-    hair.scale.set(1.05, 0.7, 1.1)
-    hair.position.set(0, 1.76, -0.02)
+    hair.scale.set(kit.zombie ? 1.0 : 1.05, kit.zombie ? 0.45 : 0.7, 1.1)
+    hair.position.set(0, kit.zombie ? 1.78 : 1.76, kit.zombie ? -0.04 : -0.02)
     body.add(hair)
+    if (kit.zombie) {
+      const tuft = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), hairMat))
+      tuft.position.set(0.08, 1.82, -0.02)
+      body.add(tuft)
+    }
   }
 
-  if (kit.mask) {
+  if (kit.mask && !kit.zombie) {
     const mask = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.08), pbr(0x1a1e1a, { metalness: 0.5, roughness: 0.4 })))
     mask.position.set(0, 1.64, 0.12)
     body.add(mask)
   }
 
-  // arms
+  // arms — zombies reach forward
   for (const side of [-1, 1] as const) {
-    const shoulder = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), armor))
+    const shoulder = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), kit.zombie ? skin : armor))
     shoulder.position.set(side * 0.26, 1.38, 0)
     body.add(shoulder)
 
     const upper = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.22, 4, 8), shirt))
-    upper.position.set(side * 0.3, 1.18, 0.02)
-    upper.rotation.z = side * 0.15
+    if (kit.zombie) {
+      upper.position.set(side * 0.28, 1.22, 0.12)
+      upper.rotation.x = -0.9
+      upper.rotation.z = side * 0.1
+    } else {
+      upper.position.set(side * 0.3, 1.18, 0.02)
+      upper.rotation.z = side * 0.15
+    }
     body.add(upper)
 
-    const forearm = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.2, 4, 8), shirt))
-    forearm.position.set(side * 0.34, 0.95, 0.08)
-    forearm.rotation.z = side * 0.25
+    const forearm = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.2, 4, 8), kit.zombie ? skin : shirt))
+    if (kit.zombie) {
+      forearm.position.set(side * 0.3, 1.05, 0.32)
+      forearm.rotation.x = -0.5
+    } else {
+      forearm.position.set(side * 0.34, 0.95, 0.08)
+      forearm.rotation.z = side * 0.25
+    }
     body.add(forearm)
 
     const hand = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), skin))
-    hand.position.set(side * 0.36, 0.82, 0.12)
+    hand.position.set(side * (kit.zombie ? 0.3 : 0.36), kit.zombie ? 0.95 : 0.82, kit.zombie ? 0.48 : 0.12)
     body.add(hand)
+
+    if (kit.zombie && side === -1) {
+      // claw-like fingers
+      for (let f = 0; f < 3; f++) {
+        const claw = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.08, 4), pbr(0xd8d0c0, { roughness: 0.5 })))
+        claw.position.set(-0.3 + f * 0.02, 0.92, 0.55)
+        claw.rotation.x = 1.2
+        body.add(claw)
+      }
+    }
   }
 
   return body
 }
 
-function makeRifle(): THREE.Group {
+function makeRifle(rusted = false): THREE.Group {
   const gun = new THREE.Group()
   gun.name = 'gun'
-  const gunMetal = pbr(0x2a2e32, { map: TEX.metal, metalness: 0.85, roughness: 0.35 })
-  const wood = pbr(0x3a2a1a, { metalness: 0.1, roughness: 0.75 })
+  const gunMetal = pbr(rusted ? 0x4a3a28 : 0x2a2e32, { map: TEX.metal, metalness: rusted ? 0.45 : 0.85, roughness: rusted ? 0.65 : 0.35 })
+  const wood = pbr(rusted ? 0x2a1a10 : 0x3a2a1a, { metalness: 0.1, roughness: 0.8 })
 
   const receiver = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.11, 0.09), gunMetal))
   receiver.position.set(0.22, 0, 0)
@@ -216,99 +288,82 @@ export function createSoldier(): THREE.Group {
   return g
 }
 
-/** Enemy infantry — clearly human hostile soldiers. */
+/** Armed zombie infantry. */
 export function createGrunt(): THREE.Group {
   const g = new THREE.Group()
   addHumanoid(g, {
-    skin: 0xb8956c,
-    shirt: 0x5c4030,
-    pants: 0x4a3228,
-    armor: 0x4a3020,
-    boot: 0x221810,
-    hair: 0x1a1210,
-    helmet: true,
-    mask: true,
+    skin: 0x7a8a5a,
+    shirt: 0x3a3028,
+    pants: 0x2a2820,
+    armor: 0x4a3a30,
+    boot: 0x1a1810,
+    hair: 0x2a2a18,
+    zombie: true,
     enemyTint: true,
-  }, 0.98)
+  }, 1.0)
 
-  // face them left (toward player approach)
   g.rotation.y = Math.PI
 
-  const gun = makeRifle()
-  gun.position.set(0.28, 1.0, 0.18)
+  const gun = makeRifle(true)
+  gun.position.set(-0.35, 1.05, 0.35)
   gun.scale.x = -1
-  gun.position.x = -0.28
+  gun.rotation.x = -0.35
   g.add(gun)
   return g
 }
 
-/** Flying jetpack trooper — human with thruster pack. */
+/** Floating scavenger zombie with rusted weapon. */
 export function createFlyer(): THREE.Group {
   const g = new THREE.Group()
   addHumanoid(g, {
-    skin: 0xc2a078,
-    shirt: 0x4a4e52,
-    pants: 0x3a3e42,
-    armor: 0x5a5e62,
-    boot: 0x222,
-    hair: 0x1a1a1a,
-    helmet: true,
-    mask: true,
+    skin: 0x6a7a52,
+    shirt: 0x2a2820,
+    pants: 0x222018,
+    armor: 0x3a3228,
+    boot: 0x151510,
+    hair: 0x1a1a10,
+    zombie: true,
     enemyTint: true,
-  }, 0.92)
+  }, 0.95)
 
   g.rotation.y = Math.PI
 
-  const pack = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.4, 0.18), pbr(0x3a3e42, { map: TEX.metal, metalness: 0.7, roughness: 0.35 })))
-  pack.position.set(0, 1.2, -0.22)
-  g.add(pack)
-  for (const sx of [-0.08, 0.08]) {
-    const nozzle = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 8), pbr(0x222, { metalness: 0.8, roughness: 0.3 })))
-    nozzle.position.set(sx, 0.95, -0.28)
-    g.add(nozzle)
-    const flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.05, 0.2, 6),
-      new THREE.MeshStandardMaterial({ color: 0xff6622, emissive: 0xff4400, emissiveIntensity: 1.3, transparent: true, opacity: 0.85 }),
-    )
-    flame.rotation.x = Math.PI
-    flame.position.set(sx, 0.82, -0.28)
-    g.add(flame)
-  }
+  const scrap = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.12), pbr(0x3a3a30, { map: TEX.metal, metalness: 0.5, roughness: 0.55 })))
+  scrap.position.set(0, 1.25, -0.22)
+  g.add(scrap)
 
-  const gun = makeRifle()
-  gun.position.set(-0.28, 1.05, 0.15)
+  const gun = makeRifle(true)
+  gun.position.set(-0.32, 1.1, 0.4)
   gun.scale.x = -1
   g.add(gun)
   return g
 }
 
-/** Heavy trooper — bulky armored human. */
+/** Bloated armored zombie with heavy gun. */
 export function createHeavy(): THREE.Group {
   const g = new THREE.Group()
   addHumanoid(g, {
-    skin: 0xa88868,
-    shirt: 0x4a4e52,
-    pants: 0x3a3e42,
-    armor: 0x5a5e62,
-    boot: 0x1a1a1a,
-    hair: 0x111,
-    helmet: true,
-    mask: true,
+    skin: 0x5a6a48,
+    shirt: 0x2a2a22,
+    pants: 0x222018,
+    armor: 0x4a4a40,
+    boot: 0x111110,
+    hair: 0x101008,
+    zombie: true,
     enemyTint: true,
-  }, 1.12)
+  }, 1.15)
 
   g.rotation.y = Math.PI
 
-  // extra shoulder plates
   for (const side of [-1, 1] as const) {
-    const plate = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.28), pbr(0x6a6e72, { map: TEX.metal, metalness: 0.75, roughness: 0.35 })))
-    plate.position.set(side * 0.32, 1.45, 0)
+    const plate = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.28), pbr(0x5a5040, { map: TEX.metal, metalness: 0.4, roughness: 0.6 })))
+    plate.position.set(side * 0.32, 1.4, 0)
     g.add(plate)
   }
 
-  const cannon = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.7, 10), pbr(0x2a2a2a, { metalness: 0.85, roughness: 0.3 })))
+  const cannon = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.7, 10), pbr(0x3a3020, { metalness: 0.5, roughness: 0.55 })))
   cannon.rotation.z = Math.PI / 2
-  cannon.position.set(-0.55, 1.05, 0.15)
+  cannon.position.set(-0.55, 1.1, 0.25)
   g.add(cannon)
   return g
 }

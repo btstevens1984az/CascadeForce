@@ -54,7 +54,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   },
 }
 
-/** ax, ay = unit aim vector in world space (x right, y up). */
+/** Speeds are in world-units/sec (character ~1.7 tall). */
 export function fireWeapon(
   id: WeaponId,
   x: number,
@@ -72,7 +72,7 @@ export function fireWeapon(
 
   if (id === 'pulse') {
     push({
-      x, y, vx: ux * 980, vy: uy * 980, life: 0.95, damage: 12, radius: 0.18,
+      x, y, vx: ux * 26, vy: uy * 26, life: 1.2, damage: 14, radius: 0.28,
       weapon: id, color: WEAPONS.pulse.color,
     })
   } else if (id === 'hyperspread') {
@@ -82,14 +82,14 @@ export function fireWeapon(
       const dy = uy + py * s
       const d = Math.hypot(dx, dy) || 1
       push({
-        x, y, vx: (dx / d) * 820, vy: (dy / d) * 820,
-        life: 0.75, damage: 8, radius: 0.14,
+        x, y, vx: (dx / d) * 22, vy: (dy / d) * 22,
+        life: 1.0, damage: 9, radius: 0.24,
         weapon: id, color: WEAPONS.hyperspread.color,
       })
     }
   } else if (id === 'plasma') {
     push({
-      x, y, vx: ux * 1200, vy: uy * 1200, life: 1.1, damage: 18, radius: 0.2,
+      x, y, vx: ux * 32, vy: uy * 32, life: 1.3, damage: 20, radius: 0.3,
       weapon: id, pierce: 4, color: WEAPONS.plasma.color,
     })
   } else if (id === 'inferno') {
@@ -98,11 +98,11 @@ export function fireWeapon(
       const dx = ux + px * s
       const dy = uy + py * s
       const d = Math.hypot(dx, dy) || 1
-      const spd = rand(420, 580)
+      const spd = rand(12, 18)
       push({
         x: x + ux * 0.4, y: y + uy * 0.4,
         vx: (dx / d) * spd, vy: (dy / d) * spd,
-        life: 0.3, damage: 6, radius: 0.35,
+        life: 0.45, damage: 7, radius: 0.42,
         weapon: id, flame: true, color: WEAPONS.inferno.color,
       })
     }
@@ -111,15 +111,15 @@ export function fireWeapon(
       const s = (i - 1) * 0.35
       push({
         x, y: y + s * 0.2,
-        vx: ux * rand(380, 500) + px * s * 120,
-        vy: uy * rand(380, 500) + py * s * 120,
-        life: 1.6, damage: 16, radius: 0.2,
+        vx: ux * rand(10, 14) + px * s * 3,
+        vy: uy * rand(10, 14) + py * s * 3,
+        life: 2.0, damage: 18, radius: 0.28,
         weapon: id, homing: true, color: WEAPONS.swarm.color,
       })
     }
   } else if (id === 'railstorm') {
     push({
-      x, y, vx: ux * 1500, vy: uy * 1500, life: 0.85, damage: 34, radius: 0.22,
+      x, y, vx: ux * 40, vy: uy * 40, life: 1.0, damage: 38, radius: 0.32,
       weapon: id, pierce: 6, color: WEAPONS.railstorm.color,
     })
     for (let i = -2; i <= 2; i++) {
@@ -129,8 +129,8 @@ export function fireWeapon(
       const dy = uy + py * s
       const d = Math.hypot(dx, dy) || 1
       push({
-        x, y, vx: (dx / d) * 950, vy: (dy / d) * 950,
-        life: 0.5, damage: 10, radius: 0.12,
+        x, y, vx: (dx / d) * 28, vy: (dy / d) * 28,
+        life: 0.7, damage: 12, radius: 0.2,
         weapon: id, color: '#e0d0ff',
       })
     }
