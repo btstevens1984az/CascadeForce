@@ -1,6 +1,6 @@
 # Cascade Force
 
-Original side-scrolling **run-and-gun** action game — cinematic levels, steroid-tier weapon drops, mid-bosses, and escalating war machines.
+Cinematic **2.5D WebGL** run-and-gun — Three.js lighting, bloom, shadows, and steroid-tier weapon drops.
 
 Inspired by classic genre DNA. **Not affiliated with Konami or Contra.** See [DISCLAIMER.md](./DISCLAIMER.md).
 
@@ -11,16 +11,16 @@ npm install
 npm run dev
 ```
 
-Open the local URL (default **http://localhost:5174**).
+Open **http://localhost:5174**.
 
-```bash
-npm run build
-npm run preview
-```
+## What's new in v2
+
+- Rebuilt on **Three.js** (WebGL) with ACES tone mapping, soft shadows, and Unreal bloom
+- **Aim up** with `W` / `↑` (hold + move for diagonals)
+- **Duck** with `S` / `↓` to shrink your hitbox and let chest-height shots sail over you
+- Jump is **Space / K** so aim and jump never fight each other
 
 ## Campaign
-
-Three operations. Each has a **mid-boss** and a **main boss**. Difficulty climbs hard — the Cascade Overlord is built to punish greed.
 
 | Op | Theater | Mid-boss | Main boss |
 |----|---------|----------|-----------|
@@ -30,28 +30,23 @@ Three operations. Each has a **mid-boss** and a **main boss**. Difficulty climbs
 
 ## Arsenal
 
-Pick up glowing crates. Contra-style roles, cranked past safe:
-
-- **Pulse Rifle** — default carbine
-- **Hyper Spread** — seven-way shredder
-- **Plasma Lance** — piercing melt beam
-- **Inferno Thrower** — napalm river
-- **Swarm Missiles** — homing micro-warheads
-- **Railstorm** — charged slug + lightning shards
+Pulse Rifle · Hyper Spread · Plasma Lance · Inferno Thrower · Swarm Missiles · Railstorm
 
 ## Controls
 
 | Input | Action |
 |-------|--------|
-| A / D or Arrows | Move |
-| W / Space / K | Jump |
-| S | Duck |
+| A / D | Move |
+| W / ↑ | Aim up |
+| A/D + W | Aim diagonal |
+| Space / K | Jump |
+| S / ↓ | Duck (dodge high fire) · aim down in air |
 | J / Z | Fire |
 | Enter | Start / Continue |
 
 ## Stack
 
-Vite · TypeScript · Canvas 2D (parallax, glow, particles, screen shake, WebAudio SFX)
+Vite · TypeScript · Three.js · EffectComposer bloom
 
 ## License
 

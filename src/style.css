@@ -189,3 +189,54 @@ button:hover { filter: brightness(1.06); }
   color: var(--muted);
   line-height: 1.35;
 }
+
+#bossBar {
+  position: absolute;
+  left: 50%;
+  top: 52px;
+  transform: translateX(-50%);
+  width: min(420px, 70%);
+  pointer-events: none;
+  z-index: 5;
+}
+#bossBar .boss-name {
+  text-align: center;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  margin-bottom: 6px;
+  text-shadow: 0 0 12px rgba(255, 61, 90, 0.6);
+}
+#bossBar .boss-track {
+  height: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+#bossBar .boss-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff3d5a, #ffe66d);
+  box-shadow: 0 0 16px rgba(255, 61, 90, 0.55);
+}
+
+#bossBanner {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  padding: 18px 36px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255, 61, 90, 0.5);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(255, 61, 90, 0.8);
+  pointer-events: none;
+  z-index: 6;
+  white-space: nowrap;
+}
+

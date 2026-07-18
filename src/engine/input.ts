@@ -15,7 +15,6 @@ export class Input {
     return !!this.held.get(code)
   }
 
-  /** True only on the frame the key was first pressed. */
   just(code: string) {
     return this.pressed.has(code)
   }
@@ -31,12 +30,25 @@ export class Input {
     return x
   }
 
+  /** Aim up — separate from jump (Contra-style). */
+  aimUp() {
+    return this.down('KeyW') || this.down('ArrowUp')
+  }
+
+  aimDown() {
+    return this.down('KeyS') || this.down('ArrowDown')
+  }
+
   jump() {
-    return this.down('KeyW') || this.down('Space') || this.down('KeyK') || this.down('ArrowUp')
+    return this.just('Space') || this.just('KeyK')
+  }
+
+  jumpHeld() {
+    return this.down('Space') || this.down('KeyK')
   }
 
   duck() {
-    return this.down('KeyS') || this.down('ArrowDown')
+    return (this.down('KeyS') || this.down('ArrowDown')) && !this.aimUp()
   }
 
   fire() {

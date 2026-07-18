@@ -1,5 +1,3 @@
-export type Vec = { x: number; y: number }
-
 export type WeaponId =
   | 'pulse'
   | 'hyperspread'
@@ -22,6 +20,7 @@ export type Bullet = {
   homing?: boolean
   flame?: boolean
   color: string
+  mesh?: import('three').Object3D
 }
 
 export type Pickup = {
@@ -30,6 +29,7 @@ export type Pickup = {
   weapon: WeaponId
   life: number
   bob: number
+  mesh?: import('three').Object3D
 }
 
 export type Enemy = {
@@ -46,21 +46,9 @@ export type Enemy = {
   t: number
   fireCd: number
   facing: 1 | -1
-  grounded?: boolean
   phase?: number
   dead?: boolean
-}
-
-export type Particle = {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  life: number
-  max: number
-  size: number
-  color: string
-  glow?: boolean
+  mesh?: import('three').Object3D
 }
 
 export type Rect = { x: number; y: number; w: number; h: number }
@@ -79,4 +67,8 @@ export function lerp(a: number, b: number, t: number) {
 
 export function rand(a: number, b: number) {
   return a + Math.random() * (b - a)
+}
+
+export function hexToInt(hex: string) {
+  return parseInt(hex.replace('#', ''), 16)
 }
