@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cascade Force</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%230a0e18'/><path d='M12 40 L32 12 L52 40 L32 52 Z' fill='%23ff3d5a'/></svg>" />
+  </head>
+  <body>
+    <div id="frame">
+      <canvas id="game" width="1280" height="720"></canvas>
+      <div id="ui">
+        <div id="hud" class="hidden">
+          <div class="hud-left">
+            <div class="bar-wrap"><span>HP</span><div class="bar"><i id="hpBar"></i></div></div>
+            <div class="weapon" id="weaponName">PULSE RIFLE</div>
+          </div>
+          <div class="hud-center">
+            <div id="levelTitle">OPERATION ASHFALL</div>
+            <div id="objective">Advance</div>
+          </div>
+          <div class="hud-right">
+            <div>SCORE <b id="score">0</b></div>
+            <div>LIVES <b id="lives">3</b></div>
+          </div>
+        </div>
+
+        <div id="title" class="panel">
+          <p class="eyebrow">ORIGINAL DEVELOPER PROJECT</p>
+          <h1>CASCADE <span>FORCE</span></h1>
+          <p class="tag">
+            A cinematic run-and-gun campaign with steroid-tier weapon drops,
+            mid-bosses, and escalating war machines. Inspired by classic genre DNA —
+            built as an original game.
+          </p>
+          <ul class="controls">
+            <li><kbd>A</kbd><kbd>D</kbd> / Arrows — Move</li>
+            <li><kbd>W</kbd> / <kbd>Space</kbd> / <kbd>K</kbd> — Jump</li>
+            <li><kbd>J</kbd> / <kbd>Z</kbd> — Fire</li>
+            <li><kbd>S</kbd> — Duck</li>
+            <li><kbd>Enter</kbd> — Start / Continue</li>
+          </ul>
+          <button id="startBtn" type="button">BEGIN OPERATION</button>
+          <p class="legal">
+            Independent project. Not affiliated with Konami or Contra.
+            See DISCLAIMER.md.
+          </p>
+        </div>
+
+        <div id="story" class="panel hidden">
+          <p class="eyebrow" id="storyChapter">BRIEFING</p>
+          <h2 id="storyTitle">Title</h2>
+          <p id="storyBody">Body</p>
+          <button id="storyBtn" type="button">DEPLOY</button>
+        </div>
+
+        <div id="overlay" class="panel hidden">
+          <h2 id="overlayTitle">CLEAR</h2>
+          <p id="overlayBody"></p>
+          <button id="overlayBtn" type="button">CONTINUE</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

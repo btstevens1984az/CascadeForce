@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Exo+2:wght@600;800&display=swap');
+
+:root {
+  --bg: #05070d;
+  --panel: rgba(8, 12, 22, 0.92);
+  --line: rgba(255, 80, 110, 0.45);
+  --text: #f2f5ff;
+  --muted: #8b97b3;
+  --accent: #ff3d5a;
+  --accent2: #39e6ff;
+  --good: #6dffb0;
+  --font: "Chakra Petch", "Segoe UI", sans-serif;
+  --display: "Exo 2", "Trebuchet MS", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 20%, #12182a, var(--bg) 60%);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+#frame {
+  position: relative;
+  width: min(1280px, 100vw);
+  height: min(720px, 56.25vw, 100vh);
+  margin: min(2vh, 16px) auto;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 30px 100px rgba(0,0,0,0.55), 0 0 80px rgba(255, 61, 90, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hidden { display: none !important; }
+
+#hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 18px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0.45), transparent 22%, transparent 78%, rgba(0,0,0,0.35));
+}
+
+.hud-left, .hud-right, .hud-center { min-width: 180px; }
+.hud-center { text-align: center; }
+.hud-right { text-align: right; font-size: 0.85rem; letter-spacing: 0.06em; }
+.hud-right b { color: var(--accent2); }
+
+.bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.bar {
+  width: 140px;
+  height: 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #ff5a74, #ffd36a);
+  transform: scaleX(1);
+}
+.weapon {
+  margin-top: 8px;
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent2);
+  text-shadow: 0 0 12px rgba(57, 230, 255, 0.45);
+}
+
+#levelTitle {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+}
+#objective {
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.panel {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 92%);
+  padding: 28px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 24px 80px rgba(0,0,0,0.55), inset 0 0 60px rgba(255, 61, 90, 0.04);
+  backdrop-filter: blur(10px);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent2);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+}
+
+h1, h2 {
+  margin: 0 0 10px;
+  font-family: var(--display);
+  letter-spacing: 0.04em;
+}
+h1 { font-size: clamp(2.2rem, 6vw, 3.2rem); line-height: 0.95; }
+h1 span { color: var(--accent); }
+h2 { color: var(--accent); letter-spacing: 0.08em; }
+
+.tag, #storyBody, #overlayBody {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.controls {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+  font-size: 0.9rem;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.05);
+  font-size: 0.78rem;
+  margin-right: 2px;
+}
+
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  color: #1a070c;
+  background: linear-gradient(180deg, #ff8a9a, var(--accent));
+  box-shadow: 0 0 28px rgba(255, 61, 90, 0.35);
+}
+button:hover { filter: brightness(1.06); }
+
+.legal {
+  margin: 12px 0 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
