@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { TEX, pbr, } from './textures'
+import { TEX, pbr } from './textures'
 
 function shadow(m: THREE.Mesh) {
   m.castShadow = true
@@ -7,139 +7,309 @@ function shadow(m: THREE.Mesh) {
   return m
 }
 
-/** Tactical operative — muted military kit, not neon. */
-export function createSoldier(): THREE.Group {
-  const g = new THREE.Group()
-  const fatigues = pbr(0x4a5c3a, { map: TEX.grass, metalness: 0.05, roughness: 0.88 })
-  const armor = pbr(0x3a3f38, { map: TEX.metal, metalness: 0.55, roughness: 0.45 })
-  const skin = pbr(0xc4a484, { metalness: 0.05, roughness: 0.7 })
-  const gunMetal = pbr(0x2a2e32, { map: TEX.metal, metalness: 0.85, roughness: 0.35 })
+type HumanKit = {
+  skin: number
+  shirt: number
+  pants: number
+  armor: number
+  boot: number
+  hair: number
+  helmet?: boolean
+  mask?: boolean
+  enemyTint?: boolean
+}
 
-  const hips = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.28), fatigues))
-  hips.position.y = 0.72
-  g.add(hips)
+function addHumanoid(root: THREE.Group, kit: HumanKit, scale = 1) {
+  const skin = pbr(kit.skin, { metalness: 0.02, roughness: 0.62 })
+  const shirt = pbr(kit.shirt, { map: TEX.grass, metalness: 0.05, roughness: 0.82 })
+  const pants = pbr(kit.pants, { map: TEX.dirt, metalness: 0.05, roughness: 0.85 })
+  const armor = pbr(kit.armor, { map: TEX.metal, metalness: 0.45, roughness: 0.48 })
+  const boot = pbr(kit.boot, { metalness: 0.15, roughness: 0.7 })
+  const hairMat = pbr(kit.hair, { metalness: 0.05, roughness: 0.75 })
 
-  const torso = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.55, 0.32), armor))
-  torso.position.y = 1.1
-  g.add(torso)
+  const body = new THREE.Group()
+  body.scale.setScalar(scale)
+  root.add(body)
 
-  const vest = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.28, 0.34), pbr(0x2f352c, { metalness: 0.2, roughness: 0.8 })))
-  vest.position.y = 1.15
-  g.add(vest)
+  // --- Legs (hip → foot) ---
+  for (const side of [-1, 1] as const) {
+    const hipX = side * 0.11
+    const thigh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.32, 5, 10), pants))
+    thigh.position.set(hipX, 0.55, 0)
+    body.add(thigh)
 
-  const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), skin))
-  head.position.y = 1.55
-  g.add(head)
+    const shin = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.3, 5, 10), pants))
+    shin.position.set(hipX, 0.28, 0.02)
+    body.add(shin)
 
-  const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.175, 16, 12), pbr(0x2c3328, { metalness: 0.4, roughness: 0.5 })))
-  helm.scale.set(1.05, 0.75, 1.1)
-  helm.position.y = 1.62
-  g.add(helm)
+    const foot = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.24), boot))
+    foot.position.set(hipX, 0.05, 0.05)
+    body.add(foot)
 
-  const visor = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.08), pbr(0x1a2228, { metalness: 0.9, roughness: 0.15 })))
-  visor.position.set(0, 1.55, 0.14)
-  g.add(visor)
-
-  for (const sx of [-0.14, 0.14]) {
-    const thigh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.28, 4, 8), fatigues))
-    thigh.position.set(sx, 0.48, 0)
-    g.add(thigh)
-    const boot = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.26), pbr(0x1a1a18, { metalness: 0.1, roughness: 0.7 })))
-    boot.position.set(sx, 0.08, 0.04)
-    g.add(boot)
+    // knee pad
+    const knee = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), armor))
+    knee.position.set(hipX, 0.4, 0.06)
+    body.add(knee)
   }
 
-  for (const sx of [-0.28, 0.28]) {
-    const arm = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.28, 4, 8), fatigues))
-    arm.position.set(sx, 1.05, 0)
-    g.add(arm)
+  // hips / belt
+  const hips = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.18, 12), pants))
+  hips.position.y = 0.78
+  body.add(hips)
+  const belt = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 6, 16), armor))
+  belt.rotation.x = Math.PI / 2
+  belt.position.y = 0.86
+  body.add(belt)
+
+  // torso
+  const abdomen = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.22, 5, 12), shirt))
+  abdomen.position.y = 1.05
+  body.add(abdomen)
+
+  const chest = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.26), armor))
+  chest.position.y = 1.28
+  body.add(chest)
+
+  // vest straps / pouches for readability
+  const pouch = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.08), pbr(0x2a2e28, { metalness: 0.2, roughness: 0.7 })))
+  pouch.position.set(0.14, 1.18, 0.16)
+  body.add(pouch)
+  const pouch2 = pouch.clone()
+  pouch2.position.x = -0.14
+  body.add(pouch2)
+
+  // neck
+  const neck = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.1, 10), skin))
+  neck.position.y = 1.52
+  body.add(neck)
+
+  // head — slightly oval, human proportions
+  const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.135, 18, 14), skin))
+  head.scale.set(0.95, 1.08, 0.92)
+  head.position.y = 1.68
+  body.add(head)
+
+  // ears
+  for (const side of [-1, 1] as const) {
+    const ear = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), skin))
+    ear.scale.set(0.5, 1, 0.7)
+    ear.position.set(side * 0.13, 1.68, 0)
+    body.add(ear)
   }
 
+  // face: eyes, brows, nose, mouth
+  const eyeWhite = pbr(0xf2f2f0, { metalness: 0.05, roughness: 0.4 })
+  const iris = pbr(kit.enemyTint ? 0x5a2020 : 0x2a3a4a, { metalness: 0.1, roughness: 0.35 })
+  for (const side of [-1, 1] as const) {
+    const white = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), eyeWhite))
+    white.position.set(side * 0.045, 1.7, 0.11)
+    body.add(white)
+    const pupil = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), iris))
+    pupil.position.set(side * 0.045, 1.7, 0.13)
+    body.add(pupil)
+    const brow = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.02), hairMat))
+    brow.position.set(side * 0.045, 1.735, 0.12)
+    brow.rotation.z = side * -0.15
+    body.add(brow)
+  }
+
+  const nose = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.06, 6), skin))
+  nose.rotation.x = Math.PI / 2
+  nose.position.set(0, 1.665, 0.13)
+  body.add(nose)
+
+  const mouth = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.015), pbr(0x8a4a4a, { roughness: 0.6 })))
+  mouth.position.set(0, 1.615, 0.12)
+  body.add(mouth)
+
+  // hair or helmet
+  if (kit.helmet) {
+    const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), armor))
+    helm.scale.set(1.05, 0.72, 1.1)
+    helm.position.y = 1.74
+    body.add(helm)
+    const brim = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.18), armor))
+    brim.position.set(0, 1.66, 0.08)
+    body.add(brim)
+  } else {
+    const hair = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), hairMat))
+    hair.scale.set(1.05, 0.7, 1.1)
+    hair.position.set(0, 1.76, -0.02)
+    body.add(hair)
+  }
+
+  if (kit.mask) {
+    const mask = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.08), pbr(0x1a1e1a, { metalness: 0.5, roughness: 0.4 })))
+    mask.position.set(0, 1.64, 0.12)
+    body.add(mask)
+  }
+
+  // arms
+  for (const side of [-1, 1] as const) {
+    const shoulder = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), armor))
+    shoulder.position.set(side * 0.26, 1.38, 0)
+    body.add(shoulder)
+
+    const upper = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.22, 4, 8), shirt))
+    upper.position.set(side * 0.3, 1.18, 0.02)
+    upper.rotation.z = side * 0.15
+    body.add(upper)
+
+    const forearm = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.2, 4, 8), shirt))
+    forearm.position.set(side * 0.34, 0.95, 0.08)
+    forearm.rotation.z = side * 0.25
+    body.add(forearm)
+
+    const hand = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), skin))
+    hand.position.set(side * 0.36, 0.82, 0.12)
+    body.add(hand)
+  }
+
+  return body
+}
+
+function makeRifle(): THREE.Group {
   const gun = new THREE.Group()
   gun.name = 'gun'
-  const receiver = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.1), gunMetal))
-  receiver.position.set(0.25, 0, 0.12)
-  gun.add(receiver)
-  const barrel = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.55, 10), gunMetal))
-  barrel.rotation.z = Math.PI / 2
-  barrel.position.set(0.55, 0.02, 0.12)
-  gun.add(barrel)
-  const stock = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.08), pbr(0x1e221c, { metalness: 0.2, roughness: 0.7 })))
-  stock.position.set(0.02, -0.02, 0.12)
-  gun.add(stock)
-  const mag = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.08), gunMetal))
-  mag.position.set(0.28, -0.1, 0.12)
-  gun.add(mag)
-  gun.position.set(0.2, 1.05, 0.05)
-  g.add(gun)
+  const gunMetal = pbr(0x2a2e32, { map: TEX.metal, metalness: 0.85, roughness: 0.35 })
+  const wood = pbr(0x3a2a1a, { metalness: 0.1, roughness: 0.75 })
 
+  const receiver = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.11, 0.09), gunMetal))
+  receiver.position.set(0.22, 0, 0)
+  gun.add(receiver)
+  const barrel = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.5, 10), gunMetal))
+  barrel.rotation.z = Math.PI / 2
+  barrel.position.set(0.52, 0.02, 0)
+  gun.add(barrel)
+  const stock = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.09, 0.07), wood))
+  stock.position.set(0.0, -0.01, 0)
+  gun.add(stock)
+  const grip = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.06), gunMetal))
+  grip.position.set(0.12, -0.08, 0)
+  gun.add(grip)
+  const mag = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.07), gunMetal))
+  mag.position.set(0.24, -0.1, 0)
+  gun.add(mag)
+  const sight = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.03), gunMetal))
+  sight.position.set(0.3, 0.08, 0)
+  gun.add(sight)
+  return gun
+}
+
+/** Player — human tactical operative. */
+export function createSoldier(): THREE.Group {
+  const g = new THREE.Group()
+  addHumanoid(g, {
+    skin: 0xc4a484,
+    shirt: 0x4a5c3a,
+    pants: 0x3a4a32,
+    armor: 0x3a3f38,
+    boot: 0x1a1a18,
+    hair: 0x2a1e14,
+    helmet: true,
+  })
+
+  const gun = makeRifle()
+  gun.position.set(0.28, 1.0, 0.18)
+  g.add(gun)
   g.userData.gun = gun
-  g.userData.torso = torso
   return g
 }
 
+/** Enemy infantry — clearly human hostile soldiers. */
 export function createGrunt(): THREE.Group {
   const g = new THREE.Group()
-  const suit = pbr(0x5c4030, { map: TEX.dirt, metalness: 0.15, roughness: 0.85 })
-  const armor = pbr(0x4a3020, { map: TEX.metal, metalness: 0.45, roughness: 0.55 })
+  addHumanoid(g, {
+    skin: 0xb8956c,
+    shirt: 0x5c4030,
+    pants: 0x4a3228,
+    armor: 0x4a3020,
+    boot: 0x221810,
+    hair: 0x1a1210,
+    helmet: true,
+    mask: true,
+    enemyTint: true,
+  }, 0.98)
 
-  const body = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.45, 6, 12), suit))
-  body.position.y = 0.9
-  g.add(body)
-  const chest = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.32), armor))
-  chest.position.y = 1.05
-  g.add(chest)
-  const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), pbr(0xb8956c, { roughness: 0.7 })))
-  head.position.y = 1.45
-  g.add(head)
-  const mask = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.12), pbr(0x2a2018, { metalness: 0.6, roughness: 0.4 })))
-  mask.position.set(0, 1.42, 0.12)
-  g.add(mask)
-  const rifle = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.08), pbr(0x333, { metalness: 0.8, roughness: 0.35 })))
-  rifle.position.set(0.35, 0.95, 0.15)
-  g.add(rifle)
+  // face them left (toward player approach)
+  g.rotation.y = Math.PI
+
+  const gun = makeRifle()
+  gun.position.set(0.28, 1.0, 0.18)
+  gun.scale.x = -1
+  gun.position.x = -0.28
+  g.add(gun)
   return g
 }
 
+/** Flying jetpack trooper — human with thruster pack. */
 export function createFlyer(): THREE.Group {
   const g = new THREE.Group()
-  const hull = pbr(0x6a6e72, { map: TEX.metal, metalness: 0.75, roughness: 0.35 })
-  const core = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), hull))
-  g.add(core)
-  const nose = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.55, 8), hull))
-  nose.rotation.z = -Math.PI / 2
-  nose.position.x = 0.4
-  g.add(nose)
-  for (const z of [-0.45, 0.45]) {
-    const wing = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.55), pbr(0x4a4e52, { metalness: 0.7, roughness: 0.4 })))
-    wing.position.set(0, 0, z)
-    g.add(wing)
+  addHumanoid(g, {
+    skin: 0xc2a078,
+    shirt: 0x4a4e52,
+    pants: 0x3a3e42,
+    armor: 0x5a5e62,
+    boot: 0x222,
+    hair: 0x1a1a1a,
+    helmet: true,
+    mask: true,
+    enemyTint: true,
+  }, 0.92)
+
+  g.rotation.y = Math.PI
+
+  const pack = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.4, 0.18), pbr(0x3a3e42, { map: TEX.metal, metalness: 0.7, roughness: 0.35 })))
+  pack.position.set(0, 1.2, -0.22)
+  g.add(pack)
+  for (const sx of [-0.08, 0.08]) {
+    const nozzle = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 8), pbr(0x222, { metalness: 0.8, roughness: 0.3 })))
+    nozzle.position.set(sx, 0.95, -0.28)
+    g.add(nozzle)
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.05, 0.2, 6),
+      new THREE.MeshStandardMaterial({ color: 0xff6622, emissive: 0xff4400, emissiveIntensity: 1.3, transparent: true, opacity: 0.85 }),
+    )
+    flame.rotation.x = Math.PI
+    flame.position.set(sx, 0.82, -0.28)
+    g.add(flame)
   }
-  const glow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 8, 8),
-    new THREE.MeshStandardMaterial({ color: 0xff6622, emissive: 0xff4400, emissiveIntensity: 1.2, metalness: 0.2, roughness: 0.4 }),
-  )
-  glow.position.x = -0.25
-  g.add(glow)
+
+  const gun = makeRifle()
+  gun.position.set(-0.28, 1.05, 0.15)
+  gun.scale.x = -1
+  g.add(gun)
   return g
 }
 
+/** Heavy trooper — bulky armored human. */
 export function createHeavy(): THREE.Group {
   const g = new THREE.Group()
-  const plate = pbr(0x5a5e62, { map: TEX.metal, metalness: 0.8, roughness: 0.32 })
-  const body = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.7), plate))
-  body.position.y = 0.75
-  g.add(body)
-  const shoulder = shadow(new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.25, 0.5), plate))
-  shoulder.position.y = 1.35
-  g.add(shoulder)
-  const gun = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.85, 10), pbr(0x2a2a2a, { metalness: 0.85, roughness: 0.3 })))
-  gun.rotation.z = Math.PI / 2
-  gun.position.set(0.65, 0.95, 0)
-  g.add(gun)
-  const optic = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.12), pbr(0x111, { metalness: 0.5, roughness: 0.2, emissive: 0x440000, emissiveIntensity: 0.4 })))
-  optic.position.set(0.2, 1.2, 0.3)
-  g.add(optic)
+  addHumanoid(g, {
+    skin: 0xa88868,
+    shirt: 0x4a4e52,
+    pants: 0x3a3e42,
+    armor: 0x5a5e62,
+    boot: 0x1a1a1a,
+    hair: 0x111,
+    helmet: true,
+    mask: true,
+    enemyTint: true,
+  }, 1.12)
+
+  g.rotation.y = Math.PI
+
+  // extra shoulder plates
+  for (const side of [-1, 1] as const) {
+    const plate = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.28), pbr(0x6a6e72, { map: TEX.metal, metalness: 0.75, roughness: 0.35 })))
+    plate.position.set(side * 0.32, 1.45, 0)
+    g.add(plate)
+  }
+
+  const cannon = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.7, 10), pbr(0x2a2a2a, { metalness: 0.85, roughness: 0.3 })))
+  cannon.rotation.z = Math.PI / 2
+  cannon.position.set(-0.55, 1.05, 0.15)
+  g.add(cannon)
   return g
 }
 
@@ -155,6 +325,12 @@ export function createMidBoss(_accent: number): THREE.Group {
   const glass = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 0.08), pbr(0x88aacc, { metalness: 0.9, roughness: 0.1 })))
   glass.position.set(-0.3, 1.95, 0.62)
   g.add(glass)
+  // visible human pilot silhouette in the cab
+  const pilot = createGrunt()
+  pilot.scale.setScalar(0.45)
+  pilot.position.set(-0.25, 1.55, 0.15)
+  pilot.rotation.y = 0
+  g.add(pilot)
   for (const sx of [-1.1, 1.1]) {
     const track = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 1.6), pbr(0x222, { metalness: 0.5, roughness: 0.6 })))
     track.position.set(sx, 0.35, 0)
@@ -169,28 +345,56 @@ export function createMidBoss(_accent: number): THREE.Group {
 
 export function createBoss(_accent: number): THREE.Group {
   const g = new THREE.Group()
+  // Mech with a humanoid armored frame
   const hull = pbr(0x2a2420, { map: TEX.metal, metalness: 0.75, roughness: 0.35 })
-  const core = shadow(new THREE.Mesh(new THREE.SphereGeometry(1.15, 24, 18), hull))
-  core.position.y = 1.7
-  g.add(core)
-  const collar = shadow(new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.14, 10, 40), pbr(0x4a4038, { metalness: 0.8, roughness: 0.3 })))
-  collar.rotation.x = Math.PI / 2
-  collar.position.y = 1.7
-  g.add(collar)
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2
-    const arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 1.4), hull))
-    arm.position.set(Math.cos(a) * 1.5, 1.4, Math.sin(a) * 0.9)
-    arm.lookAt(0, 1.7, 0)
-    g.add(arm)
+  const skin = pbr(0xa88868, { metalness: 0.05, roughness: 0.65 })
+
+  const pelvis = shadow(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.7), hull))
+  pelvis.position.y = 1.2
+  g.add(pelvis)
+
+  const torso = shadow(new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.2, 0.85), hull))
+  torso.position.y = 2.1
+  g.add(torso)
+
+  const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 12), skin))
+  head.position.y = 3.0
+  g.add(head)
+  const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), hull))
+  helm.scale.set(1.1, 0.75, 1.15)
+  helm.position.y = 3.1
+  g.add(helm)
+  for (const side of [-1, 1] as const) {
+    const eye = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({
+      color: 0xff4422, emissive: 0xff2200, emissiveIntensity: 1.2,
+    })))
+    eye.position.set(side * 0.12, 3.0, 0.32)
+    g.add(eye)
   }
+
+  for (const side of [-1, 1] as const) {
+    const thigh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.7, 6, 10), hull))
+    thigh.position.set(side * 0.35, 0.7, 0)
+    g.add(thigh)
+    const boot = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.6), hull))
+    boot.position.set(side * 0.35, 0.15, 0.1)
+    g.add(boot)
+    const arm = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.9, 6, 10), hull))
+    arm.position.set(side * 0.95, 2.0, 0.1)
+    arm.rotation.z = side * 0.4
+    g.add(arm)
+    const fist = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), hull))
+    fist.position.set(side * 1.35, 1.4, 0.2)
+    g.add(fist)
+  }
+
   const reactor = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 16, 12),
+    new THREE.SphereGeometry(0.28, 16, 12),
     new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff6600, emissiveIntensity: 1.5, metalness: 0.3, roughness: 0.25 }),
   )
-  reactor.position.y = 1.7
+  reactor.position.set(0, 2.1, 0.5)
   g.add(reactor)
-  g.userData.core = core
+  g.userData.core = torso
   g.userData.heart = reactor
   return g
 }
