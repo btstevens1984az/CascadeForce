@@ -52,6 +52,9 @@ export class Game {
   onGround = false
   ducking = false
   aimingUp = false
+  coyote = 0
+  jumpBuffer = 0
+  crouchT = 0 // 0 stand → 1 full crouch (smoothed)
   hp = 100
   maxHp = 100
   lives = 3
@@ -166,7 +169,7 @@ export class Game {
     const bar = this.el('hpBar')
     if (bar) bar.style.transform = `scaleX(${clamp(this.hp / this.maxHp, 0, 1)})`
 
-    let objective = 'Arrows move · Space fire · Z duck · X jump'
+    let objective = '←→ move · Space fire · Z/↓ duck · W/X jump · ↑ aim'
     if (this.bossSpawned) objective = `Defeat ${this.level.bossName}`
     else if (this.midSpawned && this.enemies.some((e) => e.kind === 'midboss' && !e.dead)) {
       objective = `Defeat ${this.level.midBossName}`
@@ -356,10 +359,8 @@ export class Game {
 
   /** Ducking shrinks height so chest-aimed shots pass overhead. */
   playerHitbox() {
-    if (this.ducking && this.onGround) {
-      return { x: this.px - 0.28, y: this.py, w: 0.56, h: 0.72 }
-    }
-    return { x: this.px - 0.28, y: this.py, w: 0.56, h: 1.7 }
+    const h = lerp(1.7, 0.85, this.crouchT)
+    return { x: this.px - 0.28, y: this.py, w: 0.56, h }
   }
 
   aimVector(): { ax: number; ay: number } {
@@ -465,33 +466,57 @@ export class Game {
 
   updatePlayer(dt: number) {
     const move = this.input.moveX()
-    this.pvx = move * 7.2
+    const wantDuck = this.input.duck() && this.onGround
+    this.pvx = move * (wantDuck ? 3.6 : 7.2)
     if (move !== 0) this.facing = move > 0 ? 1 : -1
 
     this.aimingUp = this.input.aimUp()
-    this.ducking = this.input.duck() && this.onGround && !this.aimingUp
+    this.ducking = wantDuck
+    this.crouchT = lerp(this.crouchT, this.ducking ? 1 : 0, 1 - Math.pow(0.0008, dt))
 
-    if (this.input.jump() && this.onGround && !this.ducking) {
-      this.pvy = 11.5
+    // Jump buffer + coyote time
+    if (this.input.jumpPressed()) this.jumpBuffer = 0.14
+    if (this.onGround) this.coyote = 0.12
+    else this.coyote = Math.max(0, this.coyote - dt)
+    this.jumpBuffer = Math.max(0, this.jumpBuffer - dt)
+
+    if (this.jumpBuffer > 0 && (this.coyote > 0 || this.onGround)) {
+      this.pvy = 12.2
       this.onGround = false
+      this.coyote = 0
+      this.jumpBuffer = 0
+      this.ducking = false
       this.sfx.jump()
-    } else if (this.input.jumpHeld() && this.pvy > 0) {
-      this.pvy += 14 * dt
+    } else if (this.input.jumpHeld() && this.pvy > 2) {
+      this.pvy += 18 * dt
     }
 
-    this.pvy -= 28 * dt
+    this.pvy -= 32 * dt
+    this.pvy = Math.max(this.pvy, -22)
     this.px += this.pvx * dt
     this.py += this.pvy * dt
 
     this.onGround = false
+    const footX0 = this.px - 0.22
+    const footX1 = this.px + 0.22
     for (const p of this.world.platforms) {
-      if (this.pvy <= 0 && this.px + 0.2 > p.x && this.px - 0.2 < p.x + p.w) {
-        if (this.py <= p.y + 0.08 && this.py - this.pvy * dt >= p.y - 0.2) {
-          this.py = p.y
+      if (footX1 <= p.x || footX0 >= p.x + p.w) continue
+      const top = p.y
+      if (this.pvy <= 0.5) {
+        const prevY = this.py - this.pvy * dt
+        if (prevY >= top - 0.05 && this.py <= top + 0.2) {
+          this.py = top
           this.pvy = 0
           this.onGround = true
         }
       }
+    }
+
+    // Never fall through the main floor
+    if (this.py < 0) {
+      this.py = 0
+      this.pvy = 0
+      this.onGround = true
     }
 
     this.px = clamp(this.px, 1, this.levelLen() - 1)
@@ -504,7 +529,7 @@ export class Game {
       const def = WEAPONS[this.weapon]
       this.fireCd = def.cooldown / (1 + this.levelIndex * 0.05)
       const { ax, ay } = this.aimVector()
-      const muzzleY = this.py + (this.ducking ? 0.45 : this.aimingUp && Math.abs(ax) < 0.1 ? 1.7 : 1.15)
+      const muzzleY = this.py + lerp(1.15, 0.55, this.crouchT) + (this.aimingUp && Math.abs(ax) < 0.1 ? 0.45 : 0)
       const muzzleX = this.px + ax * 0.55
       const shots = fireWeapon(this.weapon, muzzleX, muzzleY, ax, ay)
       for (const s of shots) {
@@ -893,16 +918,29 @@ export class Game {
   }
 
   syncMeshes() {
+    // Crouch by lowering torso group, not flat squash (keeps human readable)
+    const crouch = this.crouchT
+    const body = this.playerMesh.userData.body as THREE.Object3D | undefined
     this.playerMesh.position.set(this.px, this.py, 0)
-    this.playerMesh.scale.x = this.facing
-    this.playerMesh.scale.y = this.ducking ? 0.55 : 1
+    this.playerMesh.scale.set(this.facing, 1, 1)
+    if (body) {
+      body.position.y = lerp(0, -0.35, crouch)
+      body.scale.y = lerp(1, 0.72, crouch)
+      body.rotation.x = lerp(0, 0.25, crouch)
+    }
     this.playerMesh.visible = !(this.invuln > 0 && Math.floor(this.t * 20) % 2 === 0)
+
+    // Jump / air lean
+    if (!this.onGround && body) {
+      body.rotation.x = Math.min(body.rotation.x, -0.08)
+    }
 
     const gun = this.playerMesh.userData.gun as THREE.Object3D | undefined
     if (gun) {
       const { ax, ay } = this.aimVector()
       gun.rotation.z = Math.atan2(ay, ax * this.facing)
-      gun.position.y = this.ducking ? 0.55 : 1.05
+      gun.position.y = lerp(1.05, 0.62, crouch)
+      gun.position.z = 0.18
     }
 
     for (const e of this.enemies) {

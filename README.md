@@ -13,7 +13,7 @@ npm run dev
 
 Open **http://localhost:5174**.
 
-**Controls:** **← →** move · **Space** fire · **Z** duck · **X** jump · **↑** aim up · **Enter** start
+**Controls:** **← →** move · **Space** fire · **Z / ↓** duck · **W / X** jump · **↑** aim up · **Enter** start
 
 ---
 
@@ -80,11 +80,10 @@ npm run capture
 | Input | Action |
 |-------|--------|
 | ← → | Move |
-| ↑ | Aim up |
-| ↓ | Aim down (in air) |
 | **Space** | **Fire** |
-| **Z** | **Duck** (hold — dodge high shots) |
-| X / Shift | Jump |
+| **Z** / **↓** | **Duck** (hold — dodge high shots) |
+| **W** / **X** / Shift | **Jump** |
+| ↑ | Aim up |
 | Enter | Start / Continue |
 
 ## Campaign

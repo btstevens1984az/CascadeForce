@@ -9,6 +9,11 @@ export class Input {
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault()
     })
     window.addEventListener('keyup', (e) => this.held.set(e.code, false))
+    // Keep focus-friendly: blur shouldn't leave keys stuck
+    window.addEventListener('blur', () => {
+      this.held.clear()
+      this.pressed.clear()
+    })
   }
 
   down(code: string) {
@@ -23,7 +28,6 @@ export class Input {
     this.pressed.clear()
   }
 
-  /** Arrow keys only for movement. */
   moveX() {
     let x = 0
     if (this.down('ArrowLeft')) x -= 1
@@ -31,29 +35,48 @@ export class Input {
     return x
   }
 
+  /** Aim up — arrow only (W is jump). */
   aimUp() {
     return this.down('ArrowUp')
   }
 
   aimDown() {
-    return this.down('ArrowDown')
+    return this.down('ArrowDown') && !this.duck()
   }
 
-  /** Jump — X / C / Shift (Space is fire). */
-  jump() {
-    return this.just('KeyX') || this.just('KeyC') || this.just('ShiftLeft') || this.just('ShiftRight')
+  /**
+   * Jump — W / X / C / Ctrl / Shift.
+   * Uses held edge via just(), plus jump buffer in Game.
+   */
+  jumpPressed() {
+    return (
+      this.just('KeyW') ||
+      this.just('KeyX') ||
+      this.just('KeyC') ||
+      this.just('ControlLeft') ||
+      this.just('ControlRight') ||
+      this.just('ShiftLeft') ||
+      this.just('ShiftRight')
+    )
   }
 
   jumpHeld() {
-    return this.down('KeyX') || this.down('KeyC') || this.down('ShiftLeft') || this.down('ShiftRight')
+    return (
+      this.down('KeyW') ||
+      this.down('KeyX') ||
+      this.down('KeyC') ||
+      this.down('ControlLeft') ||
+      this.down('ControlRight') ||
+      this.down('ShiftLeft') ||
+      this.down('ShiftRight')
+    )
   }
 
-  /** Hold Z to duck and let high shots miss. */
+  /** Duck — hold Z or Arrow Down while grounded. */
   duck() {
-    return this.down('KeyZ')
+    return this.down('KeyZ') || this.down('ArrowDown')
   }
 
-  /** Spacebar fires. */
   fire() {
     return this.down('Space')
   }

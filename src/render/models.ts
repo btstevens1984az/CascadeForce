@@ -271,7 +271,7 @@ function makeRifle(rusted = false): THREE.Group {
 /** Player — human tactical operative. */
 export function createSoldier(): THREE.Group {
   const g = new THREE.Group()
-  addHumanoid(g, {
+  const body = addHumanoid(g, {
     skin: 0xc4a484,
     shirt: 0x4a5c3a,
     pants: 0x3a4a32,
@@ -285,6 +285,7 @@ export function createSoldier(): THREE.Group {
   gun.position.set(0.28, 1.0, 0.18)
   g.add(gun)
   g.userData.gun = gun
+  g.userData.body = body
   return g
 }
 
