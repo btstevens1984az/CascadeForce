@@ -29,17 +29,20 @@ function run(cmd, args) {
   })
 }
 
-async function toGifAndMp4(webmPath, outBase) {
+async function toGifAndMp4(webmPath, outBase, seekSec = 0) {
   const mp4 = `${outBase}.mp4`
   const gif = `${outBase}.gif`
-  await run('ffmpeg', [
-    '-y', '-i', webmPath,
+  const args = ['-y']
+  if (seekSec > 0) args.push('-ss', String(seekSec))
+  args.push(
+    '-i', webmPath,
     '-t', '5',
     '-vf', 'fps=20,scale=960:-2:flags=lanczos',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-an',
     '-movflags', '+faststart',
     mp4,
-  ])
+  )
+  await run('ffmpeg', args)
   const palette = path.join(tmp, 'palette.png')
   await run('ffmpeg', [
     '-y', '-i', mp4,
@@ -200,7 +203,7 @@ async function main() {
     } catch {
       copyFileSync(webm, staged)
     }
-    await toGifAndMp4(staged, path.join(media, clip.id))
+    await toGifAndMp4(staged, path.join(media, clip.id), clip.action === 'title' ? 0 : 1.8)
     // keep the live screenshot taken mid-action (already written)
     console.log(`✓ Saved media/${clip.id}.{gif,mp4,png}`)
 
